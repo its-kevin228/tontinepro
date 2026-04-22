@@ -23,6 +23,7 @@ Le projet utilise :
    - **Tailwind CSS** comme système de styles.
    - **Express** pour les routes API et le backend.
    - **Prisma** pour la définition du schéma et l’accès à PostgreSQL.
+   -**typescript**
 
 3. Préférer une approche modulaire et lisible.
    - Code clair, maintenable et bien structuré.
