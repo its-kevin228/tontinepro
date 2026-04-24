@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          Int          @id @default(autoincrement())
+  email       String       @unique
+  name        String?
+  password    String
+  role        Role         @default(MEMBER)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  Circle      Circle[]
+  kycRequest  KycRequest?
+  memberships Membership[]
+  payments    Payment[]
+}
+
+model Circle {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String?
+  amount      Float
+  frequency   String
+  maxMembers  Int
+  status      CircleStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  organizerId Int
+  User        User         @relation(fields: [organizerId], references: [id])
+  cycles      Cycle[]
+  invitations Invitation[]
+  memberships Membership[]
+}
+
+model Membership {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  circleId Int
+  joinedAt DateTime @default(now())
+  circle   Circle   @relation(fields: [circleId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Cycle {
+  id        Int       @id @default(autoincrement())
+  number    Int
+  startDate DateTime
+  endDate   DateTime
+  status    String    @default("open")
+  circleId  Int
+  circle    Circle    @relation(fields: [circleId], references: [id])
+  payments  Payment[]
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  method    String
+  status    String   @default("pending")
+  userId    Int
+  cycleId   Int?
+  createdAt DateTime @default(now())
+  cycle     Cycle?   @relation(fields: [cycleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Invitation {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  circleId  Int
+  email     String?
+  status    String   @default("pending")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  circle    Circle   @relation(fields: [circleId], references: [id])
+}
+
+model KycRequest {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  status    String   @default("pending")
+  documents String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model PlatformSetting {
+  id             Int      @id @default(autoincrement())
+  serviceFee     Float    @default(1.0)
+  transactionFee Float    @default(0.0)
+  updatedAt      DateTime @updatedAt
+}
+
+enum Role {
+  SUPER_ADMIN
+  ORGANISATEUR
+  MEMBER
+}
+
+enum CircleStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
