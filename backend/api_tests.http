@@ -112,3 +112,24 @@ Content-Type: application/json
 POST {{baseUrl}}/circles/{{circleId}}/join
 Authorization: Bearer {{tokenMembre}}
 Content-Type: application/json
+
+###
+
+### 12. Créer une Invitation (Alice Org)
+# @name createInvitation
+POST {{baseUrl}}/circles/{{circleId}}/invitations
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "email": "invite@example.com",
+  "expiresInDays": 5
+}
+
+###
+
+### 13. Accepter une Invitation (Jean Membre)
+@inviteToken = {{createInvitation.response.body.token}}
+POST {{baseUrl}}/invitations/{{inviteToken}}/accept
+Authorization: Bearer {{tokenMembre}}
+Content-Type: application/json

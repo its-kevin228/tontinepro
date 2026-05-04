@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth.routes.js";
 import circleRoutes from "./routes/circle.routes.js";
+import invitationRoutes from "./routes/invitation.routes.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -26,6 +27,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/circles", circleRoutes);
+app.use("/api", invitationRoutes);
 
 // Les autres routes seront ajoutées ici au fur et à mesure :
 // app.use("/api/circles", circleRoutes);
