@@ -1,0 +1,114 @@
+### Variables
+@baseUrl = http://localhost:4000/api
+@authToken = {{login.response.body.token}}
+
+### 1. Health Check
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+###
+
+### 2. Inscription (Register) - Membre par défaut
+# @name registerMembre
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jean Membre",
+  "email": "jean.membre@example.com",
+  "password": "password123"
+}
+
+###
+
+### 3. Inscription (Register) - Organisateur
+# @name registerOrg
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Alice Org",
+  "email": "alce.org@example.com",
+  "password": "password123",
+  "role": "ORGANISATEUR"
+}
+
+###
+
+### 4. Connexion (Login)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice.org@example.com",
+  "password": "password123"
+}
+
+###
+
+### 5. Récupérer mon profil (Me) - Nécessite d'avoir lancé Login avant
+GET {{baseUrl}}/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW9ycHg2bjMwMDAxZDE2d2EzbHcxY3hkIiwiZW1haWwiOiJhbGljZS5vcmdAZXhhbXBsZS5jb20iLCJyb2xlIjoiT1JHQU5JU0FURVVSIiwic3RhdHVzIjoiQUNUSVZFIiwiaWF0IjoxNzc3OTMwNTExLCJleHAiOjE3Nzg1MzUzMTF9.8OgypEiQ6wbGRIfctMi3Ts3FZpKs6hO7sJzsN9XjF9g
+Content-Type: application/json
+
+###
+
+### 6. Mettre à jour mon profil
+PATCH {{baseUrl}}/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW9ycHg2bjMwMDAxZDE2d2EzbHcxY3hkIiwiZW1haWwiOiJhbGljZS5vcmdAZXhhbXBsZS5jb20iLCJyb2xlIjoiT1JHQU5JU0FURVVSIiwic3RhdHVzIjoiQUNUSVZFIiwiaWF0IjoxNzc3OTMwNTExLCJleHAiOjE3Nzg1MzUzMTF9.8OgypEiQ6wbGRIfctMi3Ts3FZpKs6hO7sJzsN9XjF9g
+Content-Type: application/json
+
+{
+  "name": "Alice Organimatrice"
+}
+
+###
+
+### 7. Créer un Cercle (Organisateur requis)
+# @name createCircle
+POST {{baseUrl}}/circles
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW9ycTVkdm0wMDAweWJ5bmxneXdzMG54IiwiZW1haWwiOiJhbGNlLm9yZ0BleGFtcGxlLmNvbSIsInJvbGUiOiJPUkdBTklTQVRFVVIiLCJzdGF0dXMiOiJBQ1RJVkUiLCJpYXQiOjE3Nzc5MzA4OTQsImV4cCI6MTc3ODUzNTY5NH0.tsMdiF4kuAgqOwejqRlQTubDZY5ySkXynumFP6rh5ng
+Content-Type: application/json
+
+{
+  "name": "Tontine Solidarité 2026",
+  "description": "Cercle pour l'épargne projet immobilier",
+  "amount": 50000,
+  "frequency": "MONTHLY",
+  "maxMembers": 10,
+  "isPublic": true
+}
+
+###
+
+### 8. Lister les Cercles Publics
+GET {{baseUrl}}/circles
+Content-Type: application/json
+
+###
+
+### 9. Voir les détails d'un Cercle
+@circleId = {{createCircle.response.body.id}}
+GET {{baseUrl}}/circles/{{circleId}}
+Content-Type: application/json
+
+###
+
+### 10. Rechercher un cercle par un Membre (Jean)
+# @name loginMembre
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "jean.membre@example.com",
+  "password": "password123"
+}
+
+###
+
+### 11. Rejoindre un Cercle (Membre)
+@tokenMembre = {{loginMembre.response.body.token}}
+POST {{baseUrl}}/circles/{{circleId}}/join
+Authorization: Bearer {{tokenMembre}}
+Content-Type: application/json

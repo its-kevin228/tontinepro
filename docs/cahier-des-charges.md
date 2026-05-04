@@ -589,12 +589,7 @@ BETTER_AUTH_URL="http://localhost:4000"
 
 ---
 
-## 13. Références et liens utiles
 
-- [Better Auth — Documentation officielle](https://better-auth.com)
-- [Better Auth — Prisma Adapter](https://better-auth.com/docs/adapters/prisma)
-- [Better Auth — Express Integration](https://better-auth.com/docs/integrations/express)
-- [Prisma — Getting Started](https://prisma.io/docs/getting-started)
 - [shadcn/ui](https://ui.shadcn.com)
 - Diagrammes : `diagrammes/dca.png` et `diagrammes/diagramedeclasse.png`
 

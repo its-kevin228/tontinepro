@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  password  String     // Hash bcrypt — jamais exposé dans les réponses API
+  role      UserRole   @default(MEMBRE)
+  status    UserStatus @default(ACTIVE)
+  image     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  memberships   Membership[]
+  kycRequest    KycRequest?
+  payments      Payment[]
+  notifications Notification[]
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ORGANISATEUR
+  MEMBRE
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+  SUSPENDED
+}
+
+// ─── Circle ────────────────────────────────────────────────────────────────
+
+model Circle {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  amount      Float
+  frequency   Frequency
+  maxMembers  Int
+  isPublic    Boolean      @default(false)
+  status      CircleStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  memberships Membership[]
+  cycles      Cycle[]
+  invitations Invitation[]
+}
+
+enum Frequency {
+  WEEKLY
+  MONTHLY
+}
+
+enum CircleStatus {
+  PENDING
+  ACTIVE
+  CLOSED
+}
+
+// ─── Membership ────────────────────────────────────────────────────────────
+
+model Membership {
+  id       String         @id @default(cuid())
+  userId   String
+  circleId String
+  role     MembershipRole @default(MEMBRE)
+  order    Int?
+  joinedAt DateTime       @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  circle   Circle    @relation(fields: [circleId], references: [id])
+  payments Payment[]
+
+  @@unique([userId, circleId])
+}
+
+enum MembershipRole {
+  ORGANISATEUR
+  MEMBRE
+}
+
+// ─── Cycle ─────────────────────────────────────────────────────────────────
+
+model Cycle {
+  id          String      @id @default(cuid())
+  circleId    String
+  number      Int
+  startDate   DateTime
+  endDate     DateTime?
+  beneficiary String?
+  status      CycleStatus @default(OPEN)
+  createdAt   DateTime    @default(now())
+
+  circle   Circle    @relation(fields: [circleId], references: [id])
+  payments Payment[]
+}
+
+enum CycleStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+// ─── Payment ───────────────────────────────────────────────────────────────
+
+model Payment {
+  id           String        @id @default(cuid())
+  userId       String
+  cycleId      String
+  membershipId String
+  amount       Float
+  method       PaymentMethod @default(CASH)
+  status       PaymentStatus @default(PENDING)
+  confirmedAt  DateTime?
+  receiptUrl   String?
+  createdAt    DateTime      @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  cycle      Cycle      @relation(fields: [cycleId], references: [id])
+  membership Membership @relation(fields: [membershipId], references: [id])
+}
+
+enum PaymentMethod {
+  CASH
+  VIREMENT
+  MOBILE_MONEY
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+// ─── Invitation ────────────────────────────────────────────────────────────
+
+model Invitation {
+  id        String           @id @default(cuid())
+  circleId  String
+  token     String           @unique @default(cuid())
+  email     String?
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  circle Circle @relation(fields: [circleId], references: [id])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+// ─── KYC ───────────────────────────────────────────────────────────────────
+
+model KycRequest {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  documentUrl String
+  status      KycStatus @default(PENDING)
+  reviewedAt  DateTime?
+  reviewNote  String?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Platform Settings ─────────────────────────────────────────────────────
+
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
