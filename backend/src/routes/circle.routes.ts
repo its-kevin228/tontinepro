@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createCircle, getCircles, getCircleById, joinCircle } from "../controllers/circle.controller";
+import { createCircle, getCircles, getCircleById, joinCircle, activateCircle } from "../controllers/circle.controller";
 import { requireAuth } from "../middlewares/requireAuth";
 import { requireRole } from "../middlewares/requireRole";
 import { UserRole } from "@prisma/client";
@@ -13,5 +13,6 @@ router.get("/:id", getCircleById);
 // Routes protégées
 router.post("/", requireAuth, requireRole(UserRole.ORGANISATEUR, UserRole.SUPER_ADMIN), createCircle);
 router.post("/:id/join", requireAuth, joinCircle);
+router.post("/:id/activate", requireAuth, activateCircle);
 
 export default router;

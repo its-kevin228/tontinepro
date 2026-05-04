@@ -133,3 +133,10 @@ Content-Type: application/json
 POST {{baseUrl}}/invitations/{{inviteToken}}/accept
 Authorization: Bearer {{tokenMembre}}
 Content-Type: application/json
+
+###
+
+### 14. Activer le Cercle (Organisateur) - Déclenche le Tirage au sort
+POST {{baseUrl}}/circles/{{circleId}}/activate
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
