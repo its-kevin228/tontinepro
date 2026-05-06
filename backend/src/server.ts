@@ -6,6 +6,11 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import circleRoutes from "./routes/circle.routes.js";
 import invitationRoutes from "./routes/invitation.routes.js";
+import cycleRoutes, { closeCycleRoute } from "./routes/cycle.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -27,15 +32,13 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/circles", circleRoutes);
+app.use("/api/circles/:id/cycles", cycleRoutes);  // GET/POST cycles d'un cercle
+app.use("/api/cycles", closeCycleRoute);           // PATCH /api/cycles/:id/close
 app.use("/api", invitationRoutes);
-
-// Les autres routes seront ajoutées ici au fur et à mesure :
-// app.use("/api/circles", circleRoutes);
-// app.use("/api/payments", paymentRoutes);
-// app.use("/api/cycles", cycleRoutes);
-// app.use("/api/invitations", invitationRoutes);
-// app.use("/api/notifications", notificationRoutes);
-// app.use("/api/admin", adminRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ─── Health check ──────────────────────────────────────────────────────────
 
