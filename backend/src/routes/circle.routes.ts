@@ -6,9 +6,9 @@ import { UserRole } from "@prisma/client";
 
 const router = Router();
 
-// Routes publiques
-router.get("/", getCircles);
-router.get("/:id", getCircleById);
+// Routes protégées — l'utilisateur voit SES cercles
+router.get("/", requireAuth, getCircles);
+router.get("/:id", requireAuth, getCircleById);
 
 // Routes protégées
 router.post("/", requireAuth, requireRole(UserRole.ORGANISATEUR, UserRole.SUPER_ADMIN), createCircle);

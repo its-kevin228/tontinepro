@@ -45,7 +45,7 @@ export async function createCircle(req: Request, res: Response): Promise<void> {
       },
     });
 
-    res.status(201).json(circle);
+    res.status(201).json({ circle });
   } catch (error) {
     console.error("Erreur création cercle:", error);
     res.status(500).json({ error: "Erreur lors de la création du cercle" });
@@ -54,19 +54,36 @@ export async function createCircle(req: Request, res: Response): Promise<void> {
 
 // GET /api/circles
 export async function getCircles(req: Request, res: Response): Promise<void> {
-  const circles = await prisma.circle.findMany({
-    where: {
-      isPublic: true,
-      status: "ACTIVE",
-    },
-    include: {
-      _count: {
-        select: { memberships: true },
+  const userId = req.user?.id;
+
+  // Si connecté → mes cercles (via memberships)
+  if (userId) {
+    const circles = await prisma.circle.findMany({
+      where: {
+        memberships: { some: { userId } },
       },
+      include: {
+        _count: { select: { memberships: true } },
+        memberships: {
+          where: { userId },
+          select: { role: true, order: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ circles });
+    return;
+  }
+
+  // Sinon → cercles publics
+  const circles = await prisma.circle.findMany({
+    where: { isPublic: true, status: "ACTIVE" },
+    include: {
+      _count: { select: { memberships: true } },
     },
   });
 
-  res.json(circles);
+  res.json({ circles });
 }
 
 // GET /api/circles/:id
@@ -94,7 +111,7 @@ export async function getCircleById(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  res.json(circle);
+  res.json({ circle });
 }
 
 // POST /api/circles/:id/join
@@ -145,7 +162,7 @@ export async function joinCircle(req: Request, res: Response): Promise<void> {
       },
     });
 
-    res.status(201).json(membership);
+    res.status(201).json({ membership });
   } catch (error) {
     console.error("Erreur adhésion cercle:", error);
     res.status(500).json({ error: "Erreur lors de l'adhésion au cercle" });

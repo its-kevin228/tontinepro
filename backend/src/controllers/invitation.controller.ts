@@ -39,10 +39,50 @@ export async function createInvitation(req: Request, res: Response): Promise<voi
       },
     });
 
-    res.status(201).json(invitation);
+    res.status(201).json({ invitation });
   } catch (error) {
     console.error("Erreur création invitation:", error);
     res.status(500).json({ error: "Erreur lors de la création de l'invitation" });
+  }
+}
+
+// GET /api/invitations/:token — Vérifier un lien d'invitation
+export async function verifyInvitation(req: Request, res: Response): Promise<void> {
+  const { token } = req.params;
+
+  try {
+    const invitation = await prisma.invitation.findUnique({
+      where: { token },
+      include: {
+        circle: {
+          include: {
+            memberships: {
+              include: { user: { select: { id: true, name: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      res.status(404).json({ error: "Invitation introuvable" });
+      return;
+    }
+
+    // Vérifier l'expiration
+    if (invitation.status === InvitationStatus.PENDING && invitation.expiresAt < new Date()) {
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { status: InvitationStatus.EXPIRED },
+      });
+      res.json({ invitation: { ...invitation, status: "EXPIRED" }, circle: invitation.circle });
+      return;
+    }
+
+    res.json({ invitation, circle: invitation.circle });
+  } catch (error) {
+    console.error("Erreur vérification invitation:", error);
+    res.status(500).json({ error: "Erreur lors de la vérification" });
   }
 }
 
@@ -88,7 +128,7 @@ export async function acceptInvitation(req: Request, res: Response): Promise<voi
       }),
     ]);
 
-    res.json({ message: "Invitation acceptée avec succès", circleId: invitation.circleId });
+    res.json({ message: "Invitation acceptée avec succès", circleId: invitation.circleId, membership: { circleId: invitation.circleId } });
   } catch (error) {
     console.error("Erreur acceptation invitation:", error);
     res.status(500).json({ error: "Erreur lors de l'acceptation de l'invitation" });
