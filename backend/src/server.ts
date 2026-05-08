@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./lib/swagger.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import circleRoutes from "./routes/circle.routes.js";
@@ -27,6 +29,9 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ─── Documentation API ──────────────────────────────────────────────────────
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ─── Routes ────────────────────────────────────────────────────────────────
 
