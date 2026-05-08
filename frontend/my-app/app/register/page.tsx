@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { fetchApi } from "@/lib/api";
-import { ArrowRight, Lock, Mail, User, Phone, Loader2 } from "lucide-react";
+import { ArrowRight, Lock, Mail, User, Phone, Loader2, Users, Briefcase } from "lucide-react";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -14,6 +14,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     phone: "",
+    role: "MEMBRE",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,8 +36,8 @@ export default function RegisterPage() {
         body: JSON.stringify(formData),
       });
 
-      login(data.token, data.user);
-      router.push("/dashboard");
+      // Rediriger vers la page de vérification avec l'email en query param
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -84,7 +85,7 @@ export default function RegisterPage() {
                 name="name"
                 type="text"
                 required
-                placeholder="Jean Dupont"
+                placeholder="Nom prénom"
                 className="block w-full h-14 pl-12 pr-4 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
                 value={formData.name}
                 onChange={handleChange}
@@ -148,6 +149,49 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
               />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2">
+            <label className="text-[14px] font-bold uppercase tracking-wider text-[#2d334a]/60 ml-1">
+              Je souhaite être...
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, role: "MEMBRE" })}
+                className={`p-4 rounded-2xl border-2 transition-all text-left flex flex-col gap-2 ${
+                  formData.role === "MEMBRE"
+                    ? "border-[#ffd803] bg-[#ffd803]/10"
+                    : "border-[#dfe5f2] bg-transparent hover:border-[#ffd803]/40"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${formData.role === 'MEMBRE' ? 'bg-[#ffd803] text-[#272343]' : 'bg-[#e3f6f5] text-[#2d334a]/60'}`}>
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-[15px]">Membre</p>
+                  <p className="text-[11px] text-[#2d334a]/60 leading-tight">Je rejoins des tontines existantes</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, role: "ORGANISATEUR" })}
+                className={`p-4 rounded-2xl border-2 transition-all text-left flex flex-col gap-2 ${
+                  formData.role === "ORGANISATEUR"
+                    ? "border-[#ffd803] bg-[#ffd803]/10"
+                    : "border-[#dfe5f2] bg-transparent hover:border-[#ffd803]/40"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${formData.role === 'ORGANISATEUR' ? 'bg-[#ffd803] text-[#272343]' : 'bg-[#e3f6f5] text-[#2d334a]/60'}`}>
+                  <Briefcase className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-[15px]">Organisateur</p>
+                  <p className="text-[11px] text-[#2d334a]/60 leading-tight">Je crée et gère mes propres cercles</p>
+                </div>
+              </button>
             </div>
           </div>
 

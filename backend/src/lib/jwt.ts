@@ -12,11 +12,11 @@ export interface JwtPayload {
 }
 
 // Génère un token JWT signé
-export function signToken(payload: JwtPayload): string {
+export function signToken(payload: JwtPayload, expiresin?: string): string {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET manquant dans les variables d'environnement");
   }
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresin || JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
 // Vérifie et décode un token — renvoie null si invalide/expiré

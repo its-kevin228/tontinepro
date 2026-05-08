@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register, login, me, updateMe } from "../controllers/auth.controller";
+import { register, login, me, updateMe, verifyEmail, resendOTP } from "../controllers/auth.controller";
 import { requireAuth } from "../middlewares/requireAuth.js";
 
 const router = Router();
@@ -42,11 +42,29 @@ const router = Router();
  *                 default: MEMBRE
  *     responses:
  *       201:
- *         description: Utilisateur créé avec succès
+ *         description: Utilisateur créé avec succès. Un code OTP a été envoyé par email.
  *       400:
  *         description: Email déjà utilisé ou données invalides
  */
 router.post("/register", register);
+
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Vérifier l'email avec le code OTP
+ *     tags: [Auth]
+ */
+router.post("/verify-email", verifyEmail);
+
+/**
+ * @swagger
+ * /api/auth/resend-otp:
+ *   post:
+ *     summary: Renvoyer un nouveau code OTP
+ *     tags: [Auth]
+ */
+router.post("/resend-otp", resendOTP);
 
 /**
  * @swagger

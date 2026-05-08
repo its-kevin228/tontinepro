@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ export default function LoginPage() {
     try {
       const data = await fetchApi("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       login(data.token, data.user);
@@ -110,6 +111,32 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between ml-1">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <div className="w-6 h-6 bg-[#e3f6f5]/40 border-2 border-[#dfe5f2] rounded-lg peer-checked:bg-[#ffd803] peer-checked:border-[#ffd803] transition-all"></div>
+                <svg
+                  className="absolute top-1 left-1 w-4 h-4 text-[#272343] opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span className="text-[14px] font-bold text-[#2d334a]/60 group-hover:text-[#272343] transition-colors">
+                Se souvenir de moi
+              </span>
+            </label>
           </div>
 
           <button

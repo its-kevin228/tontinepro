@@ -4,6 +4,7 @@ import { z } from "zod";
 import { UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { signToken } from "../lib/jwt";
+import { sendOTP } from "../lib/mail";
 
 // Schémas de validation
 const registerSchema = z.object({
@@ -13,9 +14,19 @@ const registerSchema = z.object({
   role: z.enum([UserRole.MEMBRE, UserRole.ORGANISATEUR]).default(UserRole.MEMBRE),
 });
 
+const verifyEmailSchema = z.object({
+  email: z.string().email("Email invalide"),
+  code: z.string().length(6, "Le code doit faire 6 chiffres"),
+});
+
+const resendOTPSchema = z.object({
+  email: z.string().email("Email invalide"),
+});
+
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(1, "Mot de passe requis"),
+  rememberMe: z.boolean().optional(), // Ajout ici
 });
 
 // POST /api/auth/register
@@ -35,25 +46,97 @@ export async function register(req: Request, res: Response): Promise<void> {
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   const user = await prisma.user.create({
     data: { 
       name, 
       email, 
       password: hashedPassword,
-      role 
+      role,
+      otpCode,
+      otpExpires
     },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, isVerified: true, createdAt: true },
+  });
+
+  await sendOTP(email, otpCode);
+
+  res.status(201).json({ 
+    message: "Compte créé. Veuillez vérifier votre email.",
+    user: { id: user.id, email: user.email } 
+  });
+}
+
+// POST /api/auth/verify-email
+export async function verifyEmail(req: Request, res: Response): Promise<void> {
+  const parsed = verifyEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  const { email, code } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || user.otpCode !== code) {
+    res.status(400).json({ error: "Code de vérification invalide" });
+    return;
+  }
+
+  if (user.otpExpires && user.otpExpires < new Date()) {
+    res.status(400).json({ error: "Le code a expiré" });
+    return;
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: { 
+      isVerified: true, 
+      otpCode: null, 
+      otpExpires: null 
+    },
+    select: { id: true, name: true, email: true, role: true, isVerified: true },
   });
 
   const token = signToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
+    userId: updatedUser.id,
+    email: updatedUser.email,
+    role: updatedUser.role,
     status: "ACTIVE",
   });
 
-  res.status(201).json({ token, user });
+  res.json({ token, user: updatedUser });
+}
+
+// POST /api/auth/resend-otp
+export async function resendOTP(req: Request, res: Response): Promise<void> {
+  const parsed = resendOTPSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0].message });
+    return;
+  }
+
+  const { email } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    res.status(404).json({ error: "Utilisateur non trouvé" });
+    return;
+  }
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { otpCode, otpExpires }
+  });
+
+  await sendOTP(email, otpCode);
+
+  res.json({ message: "Nouveau code envoyé" });
 }
 
 // POST /api/auth/login
@@ -64,7 +147,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { email, password } = parsed.data;
+  const { email, password, rememberMe } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -83,12 +166,15 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const token = signToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    status: user.status,
-  });
+  const token = signToken(
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    },
+    rememberMe ? "30d" : "7d" // 30 jours si coché, sinon 7 jours
+  );
 
   res.json({
     token,

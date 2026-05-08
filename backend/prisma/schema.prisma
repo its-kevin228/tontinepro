@@ -16,6 +16,9 @@ model User {
   password  String     // Hash bcrypt — jamais exposé dans les réponses API
   role      UserRole   @default(MEMBRE)
   status    UserStatus @default(ACTIVE)
+  isVerified Boolean   @default(false)
+  otpCode    String?
+  otpExpires DateTime?
   image     String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
