@@ -1,86 +1,23 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
-import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./lib/swagger.js";
+import dotenv from "dotenv";
+import authRoutes from "./routes/auth.routes";
+import circleRoutes from "./routes/circle.routes";
+import invitationRoutes from "./routes/invitation.routes";
 
-import authRoutes from "./routes/auth.routes.js";
-import circleRoutes from "./routes/circle.routes.js";
-import invitationRoutes from "./routes/invitation.routes.js";
-import cycleRoutes, { closeCycleRoute } from "./routes/cycle.routes.js";
-import paymentRoutes from "./routes/payment.routes.js";
-import notificationRoutes from "./routes/notification.routes.js";
-import userRoutes from "./routes/user.routes.js";
-import adminRoutes from "./routes/admin.routes.js";
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT ?? 4000;
 
-// ─── Middlewares globaux ────────────────────────────────────────────────────
-
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
-    credentials: true,
-  })
-);
-
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 
-// ─── Documentation API ──────────────────────────────────────────────────────
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-// ─── Routes ────────────────────────────────────────────────────────────────
-
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/circles", circleRoutes);
-app.use("/api/circles/:id/cycles", cycleRoutes);  // GET/POST cycles d'un cercle
-app.use("/api/cycles", closeCycleRoute);           // PATCH /api/cycles/:id/close
-app.use("/api", invitationRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/invitations", invitationRoutes);
 
-// ─── Health check ──────────────────────────────────────────────────────────
-
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", env: process.env.NODE_ENV });
-});
-
-// ─── 404 handler ───────────────────────────────────────────────────────────
-
-app.use((_req, res) => {
-  res.status(404).json({ error: "Route introuvable" });
-});
-
-// ─── Error handler global ──────────────────────────────────────────────────
-
-app.use(
-  (
-    err: Error,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error("[Error]", err.message);
-    res.status(500).json({
-      error:
-        process.env.NODE_ENV === "development"
-          ? err.message
-          : "Erreur interne du serveur",
-    });
-  }
-);
-
-// ─── Démarrage ─────────────────────────────────────────────────────────────
-
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`✅ Serveur TontinePro démarré sur http://localhost:${PORT}`);
-  console.log(`   Environnement : ${process.env.NODE_ENV ?? "development"}`);
+  console.log(`Server running on port ${PORT}`);
 });
-
-export default app;

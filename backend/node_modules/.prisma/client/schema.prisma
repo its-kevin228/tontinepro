@@ -62,6 +62,7 @@ model Circle {
 
 enum Frequency {
   WEEKLY
+  BIWEEKLY
   MONTHLY
 }
 
