@@ -6,15 +6,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { fetchApi } from "@/lib/api";
-import { ArrowRight, Lock, Mail, Loader2 } from "lucide-react";
+import { ArrowRight, Lock, Mail, User, Phone, Loader2 } from "lucide-react";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function RegisterPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,18 +30,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const data = await fetchApi("/auth/login", {
+      const data = await fetchApi("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(formData),
       });
 
       login(data.token, data.user);
-      
-      if (data.user.role === "ADMIN") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -44,7 +47,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fffffe] font-sans text-[#272343] p-6">
       <div className="w-full max-w-md">
-        <div className="mb-12">
+        <div className="mb-12 text-center">
           <div className="mb-12 flex justify-center">
             <Link href="/" className="flex items-center gap-3">
               <div className="relative w-12 h-12">
@@ -53,21 +56,41 @@ export default function LoginPage() {
               <span className="text-2xl font-bold tracking-tighter">Tontine<span className="text-[#ffd803]">Pro</span></span>
             </Link>
           </div>
-          <h1 className="text-[32px] font-bold mb-3">Se connecter</h1>
+          <h1 className="text-[32px] font-bold mb-3">Créer un compte</h1>
           <p className="text-[#2d334a]">
-            Vous n'avez pas encore de compte ?{" "}
-            <Link href="/register" className="text-[#272343] font-bold hover:underline">
-              Créer un compte
+            Vous avez déjà un compte ?{" "}
+            <Link href="/login" className="text-[#272343] font-bold hover:underline">
+              Se connecter
             </Link>
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <div className="p-4 bg-[#f25f4c]/10 border border-[#f25f4c]/20 text-[#f25f4c] rounded-2xl text-[14px] font-medium animate-in fade-in slide-in-from-top-4">
               {error}
             </div>
           )}
+
+          <div className="space-y-2">
+            <label className="text-[14px] font-bold uppercase tracking-wider text-[#2d334a]/60 ml-1">
+              Nom complet
+            </label>
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <User className="h-5 w-5 text-[#2d334a]/30 group-focus-within:text-[#272343] transition-colors" />
+              </div>
+              <input
+                name="name"
+                type="text"
+                required
+                placeholder="Jean Dupont"
+                className="block w-full h-14 pl-12 pr-4 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
+                value={formData.name}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
 
           <div className="space-y-2">
             <label className="text-[14px] font-bold uppercase tracking-wider text-[#2d334a]/60 ml-1">
@@ -78,36 +101,52 @@ export default function LoginPage() {
                 <Mail className="h-5 w-5 text-[#2d334a]/30 group-focus-within:text-[#272343] transition-colors" />
               </div>
               <input
+                name="email"
                 type="email"
                 required
                 placeholder="nom@exemple.com"
                 className="block w-full h-14 pl-12 pr-4 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={handleChange}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-[14px] font-bold uppercase tracking-wider text-[#2d334a]/60">
-                Mot de passe
-              </label>
-              <Link href="/forgot" className="text-[14px] font-medium text-[#2d334a]/60 hover:text-[#272343]">
-                Oublié ?
-              </Link>
+            <label className="text-[14px] font-bold uppercase tracking-wider text-[#2d334a]/60 ml-1">
+              Téléphone
+            </label>
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Phone className="h-5 w-5 text-[#2d334a]/30 group-focus-within:text-[#272343] transition-colors" />
+              </div>
+              <input
+                name="phone"
+                type="tel"
+                placeholder="+228 90 00 00 00"
+                className="block w-full h-14 pl-12 pr-4 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
+                value={formData.phone}
+                onChange={handleChange}
+              />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[14px] font-bold uppercase tracking-wider text-[#2d334a]/60 ml-1">
+              Mot de passe
+            </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-5 w-5 text-[#2d334a]/30 group-focus-within:text-[#272343] transition-colors" />
               </div>
               <input
+                name="password"
                 type="password"
                 required
                 placeholder="••••••••"
                 className="block w-full h-14 pl-12 pr-4 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={handleChange}
               />
             </div>
           </div>
@@ -115,13 +154,13 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-16 bg-[#ffd803] text-[#272343] font-bold text-[18px] rounded-2xl shadow-lg hover:bg-[#e0c700] hover:-translate-y-1 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+            className="w-full h-16 bg-[#ffd803] text-[#272343] font-bold text-[18px] rounded-2xl shadow-lg hover:bg-[#e0c700] hover:-translate-y-1 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed mt-4"
           >
             {loading ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
               <>
-                Connexion <ArrowRight className="h-5 w-5" />
+                Créer mon compte <ArrowRight className="h-5 w-5" />
               </>
             )}
           </button>
