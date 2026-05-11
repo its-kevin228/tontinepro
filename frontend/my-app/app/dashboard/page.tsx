@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import {
   Users,
@@ -18,23 +19,33 @@ import Link from "next/link";
 
 export default function OrganizerDashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [circles, setCircles] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Rediriger les membres purs vers leur espace
+  useEffect(() => {
+    if (user && user.role === "MEMBRE") {
+      router.replace("/dashboard/member");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (!user) return;
     const load = async () => {
       try {
-        const [circlesData, analyticsData] = await Promise.all([
-          fetchApi("/circles"),
-          fetchApi("/organizer/analytics"),
-        ]);
+        const circlesData = await fetchApi("/circles");
         const myCircles = (circlesData.circles || []).filter(
           (c: any) => c.creatorId === user.id
         );
         setCircles(myCircles);
-        setAnalytics(analyticsData);
+
+        // Analytics uniquement pour les organisateurs et super admins
+        if (user.role === "ORGANISATEUR" || user.role === "SUPER_ADMIN") {
+          const analyticsData = await fetchApi("/organizer/analytics");
+          setAnalytics(analyticsData);
+        }
       } catch (err) {
         console.error(err);
       } finally {

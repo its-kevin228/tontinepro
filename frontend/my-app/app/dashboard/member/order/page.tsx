@@ -52,12 +52,26 @@ export default function MemberOrderPage() {
       setError(null);
       try {
         const data: { user: UserProfile } = await fetchApi("/users/me");
-        // Filtrer uniquement les cercles où l'utilisateur est MEMBRE (pas organisateur)
+
+        // Filtrer uniquement les cercles où l'utilisateur est MEMBRE
         const memberOnly = (data.user.memberships ?? []).filter(
           (m) => m.role === "MEMBRE"
         );
-        setMemberships(memberOnly);
-        if (memberOnly.length > 0) setSelected(memberOnly[0].circle.id);
+
+        // Charger les détails complets de chaque cercle (memberships + cycles)
+        const enriched = await Promise.all(
+          memberOnly.map(async (m) => {
+            try {
+              const circleData = await fetchApi(`/circles/${m.circle.id}`);
+              return { ...m, circle: circleData.circle };
+            } catch {
+              return m; // garder tel quel si erreur
+            }
+          })
+        );
+
+        setMemberships(enriched);
+        if (enriched.length > 0) setSelected(enriched[0].circle.id);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -72,7 +86,7 @@ export default function MemberOrderPage() {
 
   // Trier les membres par ordre de passage
   const sortedMembers = circle
-    ? [...circle.memberships].sort((a, b) => {
+    ? [...(circle.memberships ?? [])].sort((a, b) => {
         if (a.order === null && b.order === null) return 0;
         if (a.order === null) return 1;
         if (b.order === null) return -1;
@@ -81,8 +95,10 @@ export default function MemberOrderPage() {
     : [];
 
   // Cycle actif
-  const activeCycle = circle?.cycles?.find((c) => c.status === "OPEN");
-  const closedCycles = circle?.cycles?.filter((c) => c.status === "CLOSED") ?? [];
+  const activeCycle = circle?.cycles?.find((c: any) => c.status === "OPEN");
+  const closedCycles = circle?.cycles?.filter((c: any) => c.status === "CLOSED") ?? [];
+
+  const totalPot = circle ? circle.amount * ((circle.memberships ?? []).length) : 0;
 
   // Calculer la date estimée de passage de l'utilisateur
   const myOrder = selectedMembership?.order;
@@ -97,7 +113,6 @@ export default function MemberOrderPage() {
   };
 
   const myEstimatedDate = myOrder ? getEstimatedDate(myOrder) : null;
-  const totalPot = circle ? circle.amount * (circle.memberships?.length ?? 0) : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -176,7 +191,7 @@ export default function MemberOrderPage() {
                     {myOrder !== null && myOrder !== undefined ? `#${myOrder}` : "—"}
                   </p>
                   <p className="text-xs text-white/60 font-medium mt-1">
-                    sur {circle.memberships.length} membres
+                    sur {(circle.memberships ?? []).length} membres
                   </p>
                 </div>
 
@@ -207,7 +222,7 @@ export default function MemberOrderPage() {
                     {totalPot.toLocaleString()} FCFA
                   </p>
                   <p className="text-xs text-[#2d334a]/60 font-medium mt-1">
-                    {circle.memberships.length} × {circle.amount.toLocaleString()} FCFA
+                    {(circle.memberships ?? []).length} × {circle.amount.toLocaleString()} FCFA
                   </p>
                 </div>
               </div>

@@ -34,12 +34,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isNotifPage = pathname === "/dashboard/notifications";
   const showSwitch = user?.role === "SUPER_ADMIN" || user?.role === "ORGANISATEUR";
 
+  // Pages communes (notifications, cercles) : afficher la nav selon le rôle de l'utilisateur
+  // Un MEMBRE qui est sur /dashboard/notifications doit voir la nav membre
+  const effectiveMemberView =
+    isMemberView || (user?.role === "MEMBRE" && !pathname?.startsWith("/dashboard/circles/new"));
+
   // Quand l'utilisateur est sur la page notifications, on remet le compteur à 0 visuellement
   useEffect(() => {
     if (isNotifPage) resetUnread();
   }, [isNotifPage, resetUnread]);
 
-  const navItems = isMemberView
+  const navItems = effectiveMemberView
     ? [
         { label: "Vue Membre", href: "/dashboard/member", icon: User },
         { label: "Mes Paiements", href: "/dashboard/member/payments", icon: CreditCard },
@@ -108,10 +113,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-4">
             {showSwitch && (
               <Link
-                href={isMemberView ? "/dashboard" : "/dashboard/member"}
+                href={effectiveMemberView ? "/dashboard" : "/dashboard/member"}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 border-2 border-[#bae8e8] rounded-xl text-xs font-black uppercase tracking-widest text-[#272343] hover:bg-[#bae8e8] transition-all"
               >
-                {isMemberView ? "Vue Organisateur" : "Vue Membre"}
+                {effectiveMemberView ? "Vue Organisateur" : "Vue Membre"}
               </Link>
             )}
 
@@ -134,7 +139,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-black text-[#272343]">{user.name}</p>
                 <p className="text-[10px] font-bold text-[#2d334a]/40 uppercase tracking-widest">
-                  {isMemberView
+                  {effectiveMemberView
                     ? "Membre"
                     : user.role === "SUPER_ADMIN"
                     ? "Super Admin"

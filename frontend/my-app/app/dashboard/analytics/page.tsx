@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchApi } from "@/lib/api";
+import Link from "next/link";
 import {
   BarChart3,
   TrendingUp,
@@ -212,9 +213,12 @@ export default function AnalyticsPage() {
                       </p>
                     </div>
                   </div>
-                  <button className="w-full bg-[#ffd803] text-[#272343] py-4 rounded-2xl font-black text-sm hover:bg-white transition-all active:scale-95 shadow-lg shadow-[#ffd803]/10">
-                    Gerer le Cercle
-                  </button>
+                  <Link
+                    href={`/dashboard/circles/${data.nextPayout.circleId}`}
+                    className="w-full bg-[#ffd803] text-[#272343] py-4 rounded-2xl font-black text-sm hover:bg-white transition-all active:scale-95 shadow-lg shadow-[#ffd803]/10 text-center block"
+                  >
+                    Gérer le cercle
+                  </Link>
                 </>
               ) : (
                 <p className="text-white/60 text-sm font-bold uppercase tracking-wider">
