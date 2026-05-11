@@ -228,7 +228,7 @@ export async function generateReceipt(req: Request, res: Response): Promise<void
       user: { select: { id: true, name: true, email: true } },
       cycle: {
         include: {
-          circle: { select: { name: true, amount: true } },
+          circle: { select: { name: true, amount: true, frequency: true } },
         },
       },
     },
@@ -239,7 +239,6 @@ export async function generateReceipt(req: Request, res: Response): Promise<void
     return;
   }
 
-  // Seul le membre concerné ou un admin peut télécharger le reçu
   if (payment.userId !== userId && userRole !== "SUPER_ADMIN") {
     res.status(403).json({ error: "Accès refusé" });
     return;
@@ -250,132 +249,209 @@ export async function generateReceipt(req: Request, res: Response): Promise<void
     return;
   }
 
-  // Import dynamique pour éviter les problèmes ESM
   const PDFDocument = (await import("pdfkit")).default;
-  const doc = new PDFDocument({ margin: 50, size: "A4" });
+
+  const W = 595.28; // A4 width en points
+  const H = 841.89; // A4 height en points
+  const MARGIN = 48;
+  const CONTENT_W = W - MARGIN * 2;
+
+  // Formatage sans espace insécable (remplace \u202f et \u00a0 par espace normal)
+  const fmt = (n: number) =>
+    n.toLocaleString("fr-FR").replace(/\u202f|\u00a0/g, " ");
+
+  const METHOD_LABELS: Record<string, string> = {
+    CASH: "Espèces",
+    VIREMENT: "Virement bancaire",
+    MOBILE_MONEY: "Mobile Money",
+  };
+
+  const confirmedDate = payment.confirmedAt
+    ? new Date(payment.confirmedAt).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "—";
+
+  const receiptRef = `TP-${id.slice(-8).toUpperCase()}`;
+
+  const doc = new PDFDocument({ size: "A4", margin: 0, info: { Title: `Reçu TontinePro ${receiptRef}` } });
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="recu-tontinepro-${id.slice(0, 8)}.pdf"`
-  );
+  res.setHeader("Content-Disposition", `attachment; filename="recu-${receiptRef}.pdf"`);
   doc.pipe(res);
 
-  // ── En-tête ──────────────────────────────────────────────────────────────
+  // ── 1. FOND GÉNÉRAL ───────────────────────────────────────────────────────
+  doc.rect(0, 0, W, H).fill("#f8fafc");
+
+  // ── 2. BANDE SUPÉRIEURE ───────────────────────────────────────────────────
+  doc.rect(0, 0, W, 160).fill("#272343");
+
+  // Accent jaune gauche
+  doc.rect(0, 0, 6, 160).fill("#ffd803");
+
+  // Logo textuel : "Tontine" blanc + "Pro" jaune
   doc
-    .rect(0, 0, doc.page.width, 100)
+    .font("Helvetica-Bold")
+    .fontSize(28)
+    .fillColor("#ffffff")
+    .text("Tontine", MARGIN, 44, { continued: true })
+    .fillColor("#ffd803")
+    .text("Pro");
+
+  // Sous-titre
+  doc
+    .font("Helvetica")
+    .fontSize(11)
+    .fillColor("rgba(255,255,255,0.55)")
+    .text("Reçu de paiement officiel", MARGIN, 84);
+
+  // Référence à droite
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor("#ffd803")
+    .text(receiptRef, W - MARGIN - 120, 44, { width: 120, align: "right" });
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor("rgba(255,255,255,0.4)")
+    .text("Référence", W - MARGIN - 120, 62, { width: 120, align: "right" });
+
+  // Date en haut à droite
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor("rgba(255,255,255,0.55)")
+    .text(confirmedDate, W - MARGIN - 120, 84, { width: 120, align: "right" });
+
+  // ── 3. CARTE CENTRALE ─────────────────────────────────────────────────────
+  const cardX = MARGIN;
+  const cardY = 130;
+  const cardW = CONTENT_W;
+  const cardH = 490;
+  const radius = 16;
+
+  // Ombre simulée
+  doc.rect(cardX + 3, cardY + 3, cardW, cardH).fill("rgba(39,35,67,0.08)");
+
+  // Fond blanc de la carte
+  doc.roundedRect(cardX, cardY, cardW, cardH, radius).fill("#ffffff");
+
+  // ── 3a. Montant principal ─────────────────────────────────────────────────
+  const amountBandY = cardY + 28;
+  doc
+    .roundedRect(cardX + 24, amountBandY, cardW - 48, 72, 12)
     .fill("#272343");
 
   doc
-    .fillColor("#ffd803")
-    .fontSize(24)
-    .font("Helvetica-Bold")
-    .text("TontinePro", 50, 30);
-
-  doc
-    .fillColor("#ffffff")
-    .fontSize(11)
     .font("Helvetica")
-    .text("Reçu de paiement officiel", 50, 62);
+    .fontSize(9)
+    .fillColor("rgba(255,255,255,0.45)")
+    .text("MONTANT PAYÉ", cardX + 40, amountBandY + 14);
 
   doc
+    .font("Helvetica-Bold")
+    .fontSize(30)
     .fillColor("#ffd803")
-    .fontSize(10)
-    .text(`N° ${id.slice(0, 8).toUpperCase()}`, doc.page.width - 150, 62, { align: "right", width: 100 });
+    .text(`${fmt(payment.amount)} FCFA`, cardX + 40, amountBandY + 30);
 
-  // ── Corps ─────────────────────────────────────────────────────────────────
-  doc.moveDown(3);
+  // ── 3b. Lignes de détail ──────────────────────────────────────────────────
+  const rows: [string, string][] = [
+    ["Bénéficiaire", payment.user.name],
+    ["Email", payment.user.email],
+    ["Cercle", payment.cycle.circle.name],
+    ["Cycle", `Cycle #${payment.cycle.number}`],
+    ["Méthode de paiement", METHOD_LABELS[payment.method] ?? payment.method],
+    ["Statut", "✓  Confirmé"],
+    ["Date de confirmation", confirmedDate],
+  ];
 
-  const lineY = doc.y;
+  const rowStartY = amountBandY + 72 + 24;
+  const rowH = 38;
+  const labelX = cardX + 24;
+  const valueX = cardX + cardW / 2;
+
+  rows.forEach(([label, value], i) => {
+    const y = rowStartY + i * rowH;
+
+    // Séparateur (sauf première ligne)
+    if (i > 0) {
+      doc
+        .moveTo(labelX, y)
+        .lineTo(cardX + cardW - 24, y)
+        .strokeColor("#f0f4f8")
+        .lineWidth(0.5)
+        .stroke();
+    }
+
+    // Label
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#a7a9be")
+      .text(label.toUpperCase(), labelX, y + 10, { width: cardW / 2 - 24 });
+
+    // Valeur — "Confirmé" en vert
+    const isStatus = label === "Statut";
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .fillColor(isStatus ? "#42c88f" : "#272343")
+      .text(value, valueX, y + 8, { width: cardW / 2 - 24, align: "right" });
+  });
+
+  // ── 3c. Ligne de bas de carte ─────────────────────────────────────────────
+  const dividerY = cardY + cardH - 56;
   doc
-    .moveTo(50, lineY)
-    .lineTo(doc.page.width - 50, lineY)
-    .strokeColor("#dfe5f2")
+    .moveTo(cardX + 24, dividerY)
+    .lineTo(cardX + cardW - 24, dividerY)
+    .strokeColor("#f0f4f8")
     .lineWidth(1)
     .stroke();
 
-  doc.moveDown(1.5);
-
-  const col1 = 50;
-  const col2 = 220;
-  const rowH = 28;
-
-  const rows: [string, string][] = [
-    ["Membre", payment.user.name],
-    ["Email", payment.user.email],
-    ["Cercle", payment.cycle.circle.name],
-    ["Cycle", `#${payment.cycle.number}`],
-    ["Montant", `${payment.amount.toLocaleString("fr-FR")} FCFA`],
-    ["Méthode", payment.method],
-    ["Statut", "CONFIRMÉ ✓"],
-    [
-      "Date de confirmation",
-      payment.confirmedAt
-        ? new Date(payment.confirmedAt).toLocaleDateString("fr-FR", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          })
-        : "—",
-    ],
-  ];
-
-  rows.forEach(([label, value], i) => {
-    const y = doc.y + (i === 0 ? 0 : rowH * i - rowH);
-    if (i % 2 === 0) {
-      doc.rect(col1 - 10, y - 6, doc.page.width - 80, rowH).fill("#f8fafc");
-    }
-    doc
-      .fillColor("#a7a9be")
-      .fontSize(9)
-      .font("Helvetica-Bold")
-      .text(label.toUpperCase(), col1, y + 2);
-    doc
-      .fillColor("#272343")
-      .fontSize(11)
-      .font("Helvetica")
-      .text(value, col2, y + 2);
-  });
-
-  // ── Montant mis en valeur ─────────────────────────────────────────────────
-  doc.moveDown(rows.length + 1);
-
+  // Texte légal bas de carte
   doc
-    .rect(50, doc.y, doc.page.width - 100, 60)
-    .fill("#272343");
-
-  doc
-    .fillColor("#a7a9be")
-    .fontSize(9)
-    .font("Helvetica-Bold")
-    .text("MONTANT TOTAL PAYÉ", 70, doc.y - 50);
-
-  doc
-    .fillColor("#ffd803")
-    .fontSize(22)
-    .font("Helvetica-Bold")
-    .text(`${payment.amount.toLocaleString("fr-FR")} FCFA`, 70, doc.y - 35);
-
-  // ── Pied de page ──────────────────────────────────────────────────────────
-  doc.moveDown(4);
-
-  doc
-    .moveTo(50, doc.y)
-    .lineTo(doc.page.width - 50, doc.y)
-    .strokeColor("#dfe5f2")
-    .stroke();
-
-  doc.moveDown(1);
-  doc
-    .fillColor("#a7a9be")
-    .fontSize(9)
     .font("Helvetica")
+    .fontSize(8)
+    .fillColor("#c0c8d8")
     .text(
-      `Ce document est généré automatiquement par TontinePro. Conservez-le comme preuve de paiement.`,
-      50,
-      doc.y,
-      { align: "center", width: doc.page.width - 100 }
+      "Ce document constitue une preuve de paiement valide. Conservez-le pour vos archives.",
+      cardX + 24,
+      dividerY + 12,
+      { width: cardW - 48, align: "center" }
     );
+
+  // ── 4. PIED DE PAGE ───────────────────────────────────────────────────────
+  const footerY = cardY + cardH + 28;
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .fillColor("#272343")
+    .text("TontinePro", MARGIN, footerY, { continued: true })
+    .font("Helvetica")
+    .fillColor("#a7a9be")
+    .text("  ·  Plateforme de gestion de tontines");
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor("#c0c8d8")
+    .text(
+      `Document généré le ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`,
+      MARGIN,
+      footerY + 16
+    );
+
+  // Référence répétée en bas à droite
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .fillColor("#dfe5f2")
+    .text(receiptRef, W - MARGIN - 100, footerY, { width: 100, align: "right" });
 
   doc.end();
 }
