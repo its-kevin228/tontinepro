@@ -1,4 +1,13 @@
-import { PrismaClient, UserRole, Frequency, CircleStatus, CycleStatus, MembershipRole, PaymentStatus, PaymentMethod } from "@prisma/client";
+import {
+  PrismaClient,
+  UserRole,
+  Frequency,
+  CircleStatus,
+  CycleStatus,
+  MembershipRole,
+  PaymentStatus,
+  PaymentMethod,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -6,57 +15,65 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding TontinePro...\n");
 
+  const password = await bcrypt.hash("Test1234!", 12);
+
   // ──────────────────────────────────────────────────────────────────────────
   // 1. UTILISATEURS
   // ──────────────────────────────────────────────────────────────────────────
-  const password = await bcrypt.hash("Test1234!", 12);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@tontinepro.com" },
     update: { isVerified: true },
-    create: {
-      name: "Super Admin",
-      email: "admin@tontinepro.com",
-      password,
-      role: UserRole.SUPER_ADMIN,
-      isVerified: true,
-    },
+    create: { name: "Super Admin", email: "admin@tontinepro.com", password, role: UserRole.SUPER_ADMIN, isVerified: true },
   });
-  console.log("✅ Super Admin créé :", admin.email);
 
   const organisateur = await prisma.user.upsert({
     where: { email: "kevin@tontinepro.com" },
     update: { isVerified: true },
-    create: {
-      name: "Kevin Organisateur",
-      email: "kevin@tontinepro.com",
-      password,
-      role: UserRole.ORGANISATEUR,
-      isVerified: true,
-    },
+    create: { name: "Kevin Organisateur", email: "kevin@tontinepro.com", password, role: UserRole.ORGANISATEUR, isVerified: true },
   });
-  console.log("✅ Organisateur créé :", organisateur.email);
 
-  const membres = [];
-  for (let i = 1; i <= 4; i++) {
-    const m = await prisma.user.upsert({
-      where: { email: `membre${i}@test.com` },
-      update: { isVerified: true },
-      create: {
-        name: `Membre ${i}`,
-        email: `membre${i}@test.com`,
-        password,
-        role: UserRole.MEMBRE,
-        isVerified: true,
-      },
-    });
-    membres.push(m);
-    console.log(`✅ Membre créé : ${m.email}`);
-  }
+  // Membre 1 — a déjà payé (CONFIRMED) → verra "Cotisation payée ✓"
+  const membre1 = await prisma.user.upsert({
+    where: { email: "membre1@test.com" },
+    update: { isVerified: true },
+    create: { name: "Membre 1", email: "membre1@test.com", password, role: UserRole.MEMBRE, isVerified: true },
+  });
+
+  // Membre 2 — a déjà payé (CONFIRMED) → verra "Cotisation payée ✓"
+  const membre2 = await prisma.user.upsert({
+    where: { email: "membre2@test.com" },
+    update: { isVerified: true },
+    create: { name: "Membre 2", email: "membre2@test.com", password, role: UserRole.MEMBRE, isVerified: true },
+  });
+
+  // Membre 3 — N'A PAS ENCORE PAYÉ → verra le bouton "Payer ma cotisation"
+  const membre3 = await prisma.user.upsert({
+    where: { email: "membre3@test.com" },
+    update: { isVerified: true },
+    create: { name: "Membre 3", email: "membre3@test.com", password, role: UserRole.MEMBRE, isVerified: true },
+  });
+
+  // Membre 4 — N'A PAS ENCORE PAYÉ → verra le bouton "Payer ma cotisation"
+  const membre4 = await prisma.user.upsert({
+    where: { email: "membre4@test.com" },
+    update: { isVerified: true },
+    create: { name: "Membre 4", email: "membre4@test.com", password, role: UserRole.MEMBRE, isVerified: true },
+  });
+
+  // Membre TEST — compte vierge, aucun paiement, pour tester le flow complet
+  const membreTest = await prisma.user.upsert({
+    where: { email: "test@tontinepro.com" },
+    update: { isVerified: true },
+    create: { name: "Membre Test", email: "test@tontinepro.com", password, role: UserRole.MEMBRE, isVerified: true },
+  });
+
+  console.log("✅ 7 utilisateurs créés");
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 2. CERCLE + MEMBERSHIPS
+  // 2. CERCLE
   // ──────────────────────────────────────────────────────────────────────────
+
   const circle = await prisma.circle.upsert({
     where: { id: "seed-circle-001" },
     update: {},
@@ -66,44 +83,40 @@ async function main() {
       description: "Cercle familial pour l'épargne mensuelle",
       amount: 25000,
       frequency: Frequency.MONTHLY,
-      maxMembers: 5,
+      maxMembers: 6,
       isPublic: false,
       status: CircleStatus.ACTIVE,
       creatorId: organisateur.id,
     },
   });
-  console.log("\n✅ Cercle créé :", circle.name);
+  console.log("✅ Cercle créé :", circle.name);
 
-  // Organisateur = membre du cercle
-  await prisma.membership.upsert({
-    where: { userId_circleId: { userId: organisateur.id, circleId: circle.id } },
-    update: {},
-    create: {
-      userId: organisateur.id,
-      circleId: circle.id,
-      role: MembershipRole.ORGANISATEUR,
-      order: 1,
-    },
-  });
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3. MEMBERSHIPS
+  // ──────────────────────────────────────────────────────────────────────────
 
-  // Ajouter les 4 membres
-  for (let i = 0; i < membres.length; i++) {
+  const allMembers = [
+    { user: organisateur, role: MembershipRole.ORGANISATEUR, order: 1 },
+    { user: membre1,      role: MembershipRole.MEMBRE,       order: 2 },
+    { user: membre2,      role: MembershipRole.MEMBRE,       order: 3 },
+    { user: membre3,      role: MembershipRole.MEMBRE,       order: 4 },
+    { user: membre4,      role: MembershipRole.MEMBRE,       order: 5 },
+    { user: membreTest,   role: MembershipRole.MEMBRE,       order: 6 },
+  ];
+
+  for (const { user, role, order } of allMembers) {
     await prisma.membership.upsert({
-      where: { userId_circleId: { userId: membres[i].id, circleId: circle.id } },
+      where: { userId_circleId: { userId: user.id, circleId: circle.id } },
       update: {},
-      create: {
-        userId: membres[i].id,
-        circleId: circle.id,
-        role: MembershipRole.MEMBRE,
-        order: i + 2,
-      },
+      create: { userId: user.id, circleId: circle.id, role, order },
     });
   }
-  console.log("✅ 5 memberships créés (1 organisateur + 4 membres)");
+  console.log("✅ 6 memberships créés");
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 3. CYCLE
+  // 4. CYCLE OUVERT
   // ──────────────────────────────────────────────────────────────────────────
+
   const now = new Date();
   const endDate = new Date(now);
   endDate.setMonth(endDate.getMonth() + 1);
@@ -117,108 +130,101 @@ async function main() {
       number: 1,
       startDate: now,
       endDate,
-      beneficiary: organisateur.id,
       status: CycleStatus.OPEN,
     },
   });
-  console.log("✅ Cycle #1 créé (OPEN)");
+  console.log("✅ Cycle #1 créé (OPEN, se termine le", endDate.toLocaleDateString("fr-FR"), ")");
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 4. PAIEMENTS (2 confirmés, 1 en attente, 1 rejeté)
+  // 5. PAIEMENTS — seulement Membre 1 et Membre 2 ont payé
+  //    Membre 3, Membre 4 et Membre Test n'ont PAS payé → bouton visible
   // ──────────────────────────────────────────────────────────────────────────
-  const memberships = await prisma.membership.findMany({
-    where: { circleId: circle.id },
-  });
 
-  const statuses = [PaymentStatus.CONFIRMED, PaymentStatus.CONFIRMED, PaymentStatus.PENDING, PaymentStatus.REJECTED];
+  // Supprimer les anciens paiements du cycle pour éviter les doublons
+  await prisma.payment.deleteMany({ where: { cycleId: cycle.id } });
 
-  for (let i = 0; i < Math.min(membres.length, 4); i++) {
-    const ms = memberships.find((m) => m.userId === membres[i].id);
+  const memberships = await prisma.membership.findMany({ where: { circleId: circle.id } });
+
+  const paidMembers = [
+    { user: membre1, method: PaymentMethod.CASH },
+    { user: membre2, method: PaymentMethod.VIREMENT },
+  ];
+
+  for (const { user, method } of paidMembers) {
+    const ms = memberships.find((m) => m.userId === user.id);
     if (!ms) continue;
-
     await prisma.payment.create({
       data: {
-        userId: membres[i].id,
+        userId: user.id,
         cycleId: cycle.id,
         membershipId: ms.id,
         amount: 25000,
-        method: i % 2 === 0 ? PaymentMethod.CASH : PaymentMethod.VIREMENT,
-        status: statuses[i],
-        confirmedAt: statuses[i] === PaymentStatus.CONFIRMED ? new Date() : null,
+        method,
+        status: PaymentStatus.CONFIRMED,
+        confirmedAt: new Date(),
       },
     });
   }
-  console.log("✅ 4 paiements créés (2 confirmés, 1 en attente, 1 rejeté)");
+  console.log("✅ 2 paiements confirmés (Membre 1 + Membre 2)");
+  console.log("   → Membre 3, Membre 4 et Membre Test n'ont PAS payé");
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 5. KYC (1 en attente)
+  // 6. KYC
   // ──────────────────────────────────────────────────────────────────────────
+
   await prisma.kycRequest.upsert({
-    where: { userId: membres[0].id },
+    where: { userId: membre1.id },
     update: {},
-    create: {
-      userId: membres[0].id,
-      documentUrl: "https://drive.google.com/file/d/exemple-cni",
-    },
+    create: { userId: membre1.id, documentUrl: "https://drive.google.com/file/d/exemple-cni" },
   });
-  console.log("✅ 1 demande KYC en attente");
+  console.log("✅ 1 demande KYC en attente (Membre 1)");
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 6. INVITATION
+  // 7. PARAMÈTRES PLATEFORME
   // ──────────────────────────────────────────────────────────────────────────
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
 
-  await prisma.invitation.create({
-    data: {
-      circleId: circle.id,
-      email: "nouveau@test.com",
-      expiresAt,
-    },
-  });
-  console.log("✅ 1 invitation créée (valide 7 jours)");
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // 7. NOTIFICATIONS
-  // ──────────────────────────────────────────────────────────────────────────
-  await prisma.notification.createMany({
-    data: [
-      { userId: organisateur.id, title: "Bienvenue sur TontinePro 🎉", body: "Votre cercle 'Tontine Famille Lomé' est actif." },
-      { userId: organisateur.id, title: "Paiement confirmé ✅", body: "Le paiement de Membre 1 (25 000 FCFA) a été confirmé." },
-      { userId: membres[0].id, title: "Paiement confirmé ✅", body: "Votre paiement de 25 000 FCFA a été confirmé." },
-      { userId: membres[2].id, title: "Rappel de paiement ⏰", body: "Votre cotisation de 25 000 FCFA est en attente.", read: false },
-    ],
-  });
-  console.log("✅ 4 notifications créées");
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // 8. PARAMÈTRES PLATEFORME
-  // ──────────────────────────────────────────────────────────────────────────
   await prisma.platformSetting.upsert({
     where: { key: "service_fee" },
     update: {},
-    create: { key: "service_fee", value: "1" },   // 1% sur la cagnotte à la clôture
+    create: { key: "service_fee", value: "1" },
   });
   await prisma.platformSetting.upsert({
     where: { key: "transaction_fee" },
     update: {},
-    create: { key: "transaction_fee", value: "50" }, // 50 FCFA par paiement Mobile Money
+    create: { key: "transaction_fee", value: "50" },
   });
-  console.log("✅ 2 paramètres plateforme créés (service_fee=1%, transaction_fee=50 FCFA)\n");
+  console.log("✅ Paramètres plateforme : service_fee=1%, transaction_fee=50 FCFA");
 
   // ──────────────────────────────────────────────────────────────────────────
-  console.log("═══════════════════════════════════════════════════");
-  console.log("🎉 Seed terminé ! Comptes de test :");
-  console.log("═══════════════════════════════════════════════════");
+  // 8. NOTIFICATIONS
+  // ──────────────────────────────────────────────────────────────────────────
+
+  await prisma.notification.createMany({
+    data: [
+      { userId: organisateur.id, title: "Bienvenue 🎉", body: "Votre cercle 'Tontine Famille Lomé' est actif." },
+      { userId: membre1.id, title: "Paiement confirmé ✅", body: "Votre paiement de 25 000 FCFA a été confirmé." },
+      { userId: membre2.id, title: "Paiement confirmé ✅", body: "Votre paiement de 25 000 FCFA a été confirmé." },
+    ],
+  });
+  console.log("✅ 3 notifications créées\n");
+
+  // ──────────────────────────────────────────────────────────────────────────
+  console.log("═══════════════════════════════════════════════════════════════");
+  console.log("🎉 Seed terminé !");
+  console.log("═══════════════════════════════════════════════════════════════");
   console.log("");
-  console.log("  👑 Super Admin     : admin@tontinepro.com / Test1234!");
-  console.log("  👔 Organisateur    : kevin@tontinepro.com / Test1234!");
-  console.log("  👤 Membre 1        : membre1@test.com     / Test1234!");
-  console.log("  👤 Membre 2        : membre2@test.com     / Test1234!");
-  console.log("  👤 Membre 3        : membre3@test.com     / Test1234!");
-  console.log("  👤 Membre 4        : membre4@test.com     / Test1234!");
+  console.log("  👑 Super Admin     : admin@tontinepro.com   / Test1234!");
+  console.log("  👔 Organisateur    : kevin@tontinepro.com   / Test1234!");
   console.log("");
-  console.log("═══════════════════════════════════════════════════");
+  console.log("  ✅ A déjà payé     : membre1@test.com       / Test1234!");
+  console.log("  ✅ A déjà payé     : membre2@test.com       / Test1234!");
+  console.log("");
+  console.log("  💳 Peut payer      : membre3@test.com       / Test1234!");
+  console.log("  💳 Peut payer      : membre4@test.com       / Test1234!");
+  console.log("  💳 Compte vierge   : test@tontinepro.com    / Test1234!  ← UTILISER POUR TESTER");
+  console.log("");
+  console.log("  Cercle : http://localhost:3000/dashboard/circles/seed-circle-001");
+  console.log("═══════════════════════════════════════════════════════════════");
 }
 
 main()
