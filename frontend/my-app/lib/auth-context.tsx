@@ -1,13 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { fetchApi } from "./api";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "ORGANISATEUR" | "MEMBRE";
+  role: "SUPER_ADMIN" | "ORGANISATEUR" | "MEMBRE";
 }
 
 interface AuthContextType {
@@ -22,6 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (savedToken && savedUser) {
       try {
         setUser(JSON.parse(savedUser));
-      } catch (e) {
+      } catch {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
       }
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+    router.push("/login");
   };
 
   return (

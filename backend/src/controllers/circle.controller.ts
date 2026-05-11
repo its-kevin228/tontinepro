@@ -1,252 +1,199 @@
 import { Request, Response } from "express";
-import { z } from "zod";
-import { prisma } from "../lib/prisma";
-import { Frequency, MembershipRole, CircleStatus, CycleStatus } from "@prisma/client";
+import { PrismaClient, MembershipRole } from "@prisma/client";
 
-const createCircleSchema = z.object({
-  name: z.string().min(3, "Le nom doit faire au moins 3 caractères"),
-  description: z.string().optional(),
-  amount: z.number().positive("Le montant doit être positif"),
-  frequency: z.nativeEnum(Frequency),
-  maxMembers: z.number().int().min(2, "Il faut au moins 2 membres"),
-  isPublic: z.boolean().default(false),
-});
+const prisma = new PrismaClient();
 
-// POST /api/circles
-export async function createCircle(req: Request, res: Response): Promise<void> {
-  const parsed = createCircleSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.errors[0].message });
-    return;
-  }
-
-  const { name, description, amount, frequency, maxMembers, isPublic } = parsed.data;
-  const userId = req.user!.id;
-
+export const createCircle = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { name, description, amount, frequency, maxMembers } = req.body;
+    const creatorId = (req as any).user.id;
+
     const circle = await prisma.circle.create({
       data: {
         name,
         description,
-        amount,
+        amount: parseFloat(amount),
         frequency,
-        maxMembers,
-        isPublic,
-        // On crée automatiquement le membership de l'organisateur
+        maxMembers: parseInt(maxMembers),
+        creatorId,
         memberships: {
           create: {
-            userId: userId,
-            role: MembershipRole.ORGANISATEUR,
-          },
-        },
+            userId: creatorId,
+            role: "ORGANISATEUR",
+          }
+        }
       },
       include: {
-        memberships: true,
-      },
+        memberships: true
+      }
     });
 
-    res.status(201).json({ circle });
+    res.status(201).json({ message: "Cercle créé avec succès", circle });
   } catch (error) {
-    console.error("Erreur création cercle:", error);
-    res.status(500).json({ error: "Erreur lors de la création du cercle" });
+    res.status(500).json({ message: "Erreur lors de la création du cercle", error });
   }
-}
+};
 
-// GET /api/circles
-export async function getCircles(req: Request, res: Response): Promise<void> {
-  const userId = req.user?.id;
-
-  // Si connecté → mes cercles (via memberships)
-  if (userId) {
+export const getCircles = async (req: Request, res: Response): Promise<void> => {
+  try {
     const circles = await prisma.circle.findMany({
-      where: {
-        memberships: { some: { userId } },
-      },
       include: {
-        _count: { select: { memberships: true } },
-        memberships: {
-          where: { userId },
-          select: { role: true, order: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
+        memberships: true,
+        creator: {
+          select: { name: true }
+        }
+      }
     });
     res.json({ circles });
-    return;
-  }
-
-  // Sinon → cercles publics
-  const circles = await prisma.circle.findMany({
-    where: { isPublic: true, status: "ACTIVE" },
-    include: {
-      _count: { select: { memberships: true } },
-    },
-  });
-
-  res.json({ circles });
-}
-
-// GET /api/circles/:id
-export async function getCircleById(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
-
-  const circle = await prisma.circle.findUnique({
-    where: { id },
-    include: {
-      memberships: {
-        include: {
-          user: {
-            select: { id: true, name: true, image: true },
-          },
-        },
-      },
-      _count: {
-        select: { cycles: true },
-      },
-    },
-  });
-
-  if (!circle) {
-    res.status(404).json({ error: "Cercle non trouvé" });
-    return;
-  }
-
-  res.json({ circle });
-}
-
-// POST /api/circles/:id/join
-export async function joinCircle(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
-  const userId = req.user!.id;
-
-  try {
-    // 1. Vérifier si le cercle existe
-    const circle = await prisma.circle.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { memberships: true },
-        },
-      },
-    });
-
-    if (!circle) {
-      res.status(404).json({ error: "Cercle non trouvé" });
-      return;
-    }
-
-    // 2. Vérifier si la limite de membres est atteinte
-    if (circle._count.memberships >= circle.maxMembers) {
-      res.status(400).json({ error: "Ce cercle est déjà complet" });
-      return;
-    }
-
-    // 3. Vérifier si l'utilisateur est déjà membre
-    const existingMembership = await prisma.membership.findUnique({
-      where: {
-        userId_circleId: { userId, circleId: id },
-      },
-    });
-
-    if (existingMembership) {
-      res.status(400).json({ error: "Vous êtes déjà membre de ce cercle" });
-      return;
-    }
-
-    // 4. Créer l'adhésion
-    const membership = await prisma.membership.create({
-      data: {
-        userId,
-        circleId: id,
-        role: MembershipRole.MEMBRE,
-      },
-    });
-
-    res.status(201).json({ membership });
   } catch (error) {
-    console.error("Erreur adhésion cercle:", error);
-    res.status(500).json({ error: "Erreur lors de l'adhésion au cercle" });
+    res.status(500).json({ message: "Erreur lors de la récupération des cercles", error });
   }
-}
+};
 
-// POST /api/circles/:id/activate (Tirage au sort et démarrage)
-export async function activateCircle(req: Request, res: Response): Promise<void> {
-  const { id } = req.params;
-  const userId = req.user!.id;
-
+export const getJoinedCircles = async (req: Request, res: Response): Promise<void> => {
   try {
-    // 1. Vérifier si l'utilisateur est l'organisateur
-    const circle = await prisma.circle.findUnique({
-      where: { id },
+    const userId = (req as any).user.id;
+    const circles = await prisma.circle.findMany({
+      where: {
+        memberships: {
+          some: {
+            userId: userId
+          }
+        },
+        NOT: {
+          creatorId: userId // On exclut ceux dont il est l'organisateur pour la vue membre pure
+        }
+      },
       include: {
         memberships: true,
+        creator: {
+          select: { name: true }
+        }
+      }
+    });
+    res.json({ circles });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la récupération des cercles rejoints", error });
+  }
+};
+
+export const getCircleById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const circle = await prisma.circle.findUnique({
+      where: { id },
+      include: {
+        memberships: {
+          include: {
+            user: {
+              select: { name: true, email: true }
+            }
+          }
+        },
+        creator: {
+          select: { name: true, email: true }
+        },
+        cycles: {
+          where: { status: "OPEN" },
+          include: {
+            payments: true
+          }
+        }
+      }
+    });
+
+    if (!circle) {
+      res.status(404).json({ message: "Cercle non trouvé" });
+      return;
+    }
+
+    res.json({ circle });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la récupération du cercle", error });
+  }
+};
+
+// PATCH /api/circles/:id/order — Définir l'ordre de passage des membres
+export const setMemberOrder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id: circleId } = req.params;
+    const userId = (req as any).user.id;
+    // orders: [{ userId: string, order: number }]
+    const { orders } = req.body as { orders: { userId: string; order: number }[] };
+
+    if (!Array.isArray(orders) || orders.length === 0) {
+      res.status(400).json({ error: "Le tableau orders est requis" });
+      return;
+    }
+
+    // Vérifier que l'appelant est organisateur du cercle
+    const membership = await prisma.membership.findUnique({
+      where: { userId_circleId: { userId, circleId } },
+    });
+
+    if (!membership || membership.role !== MembershipRole.ORGANISATEUR) {
+      res.status(403).json({ error: "Seul l'organisateur peut définir l'ordre de passage" });
+      return;
+    }
+
+    // Vérifier que tous les userId appartiennent bien au cercle
+    const circleMembers = await prisma.membership.findMany({
+      where: { circleId },
+      select: { userId: true },
+    });
+    const memberIds = new Set(circleMembers.map((m) => m.userId));
+
+    for (const { userId: uid } of orders) {
+      if (!memberIds.has(uid)) {
+        res.status(400).json({ error: `L'utilisateur ${uid} n'est pas membre de ce cercle` });
+        return;
+      }
+    }
+
+    // Mettre à jour les ordres en transaction
+    await prisma.$transaction(
+      orders.map(({ userId: uid, order }) =>
+        prisma.membership.update({
+          where: { userId_circleId: { userId: uid, circleId } },
+          data: { order },
+        })
+      )
+    );
+
+    res.json({ message: "Ordre de passage mis à jour avec succès" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la mise à jour de l'ordre", error });
+  }
+};
+
+// GET /api/circles/:id — version enrichie avec user.id dans les memberships
+export const getCircleWithOrder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const circle = await prisma.circle.findUnique({
+      where: { id },
+      include: {
+        memberships: {
+          orderBy: { order: "asc" },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
+        creator: { select: { id: true, name: true, email: true } },
+        cycles: {
+          orderBy: { number: "desc" },
+          include: { payments: true },
+        },
       },
     });
 
     if (!circle) {
-      res.status(404).json({ error: "Cercle non trouvé" });
+      res.status(404).json({ message: "Cercle non trouvé" });
       return;
     }
 
-    const userMembership = circle.memberships.find(m => m.userId === userId);
-    if (!userMembership || userMembership.role !== MembershipRole.ORGANISATEUR) {
-      res.status(403).json({ error: "Seul l'organisateur peut activer le cercle" });
-      return;
-    }
-
-    if (circle.status !== CircleStatus.PENDING) {
-      res.status(400).json({ error: "Le cercle est déjà activé ou fermé" });
-      return;
-    }
-
-    if (circle.memberships.length < 2) {
-      res.status(400).json({ error: "Il faut au moins 2 membres pour démarrer" });
-      return;
-    }
-
-    // 2. Algorithme de Tirage au sort (Randomisation de l'ordre de passage)
-    const shuffledMemberships = [...circle.memberships].sort(() => Math.random() - 0.5);
-
-    // 3. Mise à jour de l'ordre en base et activation du cercle
-    await prisma.$transaction(async (tx) => {
-      // Mettre à jour l'ordre de chaque membre
-      for (let i = 0; i < shuffledMemberships.length; i++) {
-        await tx.membership.update({
-          where: { id: shuffledMemberships[i].id },
-          data: { order: i + 1 },
-        });
-      }
-
-      // Activer le cercle
-      await tx.circle.update({
-        where: { id },
-        data: { status: CircleStatus.ACTIVE },
-      });
-
-      // Créer le premier cycle (Cycle 1)
-      const startDate = new Date();
-      const endDate = new Date();
-      if (circle.frequency === Frequency.WEEKLY) endDate.setDate(endDate.getDate() + 7);
-      else endDate.setMonth(endDate.getMonth() + 1);
-
-      await tx.cycle.create({
-        data: {
-          circleId: id,
-          number: 1,
-          startDate,
-          endDate,
-          status: CycleStatus.OPEN,
-          // Le premier de la liste est le bénéficiaire
-          beneficiary: shuffledMemberships[0].userId,
-        },
-      });
-    });
-
-    res.json({ message: "Cercle activé et tirage au sort effectué avec succès" });
+    res.json({ circle });
   } catch (error) {
-    console.error("Erreur activation cercle:", error);
-    res.status(500).json({ error: "Erreur lors de l'activation du cercle" });
+    res.status(500).json({ message: "Erreur lors de la récupération du cercle", error });
   }
-}
-
-
+};

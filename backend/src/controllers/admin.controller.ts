@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import { KycStatus, UserStatus } from "@prisma/client";
+import { KycStatus, UserStatus, BanAction } from "@prisma/client";
+import { sendKycStatusEmail } from "../lib/mail.js";
 
 // ─── Dashboard global ───────────────────────────────────────────────────────
 export async function getDashboard(_req: Request, res: Response): Promise<void> {
@@ -51,6 +52,8 @@ export async function getUsers(_req: Request, res: Response): Promise<void> {
 // ─── Bannir un utilisateur ──────────────────────────────────────────────────
 export async function banUser(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
+  const { reason } = req.body;
+  const adminId = req.user!.id;
 
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
@@ -63,10 +66,20 @@ export async function banUser(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  await prisma.user.update({
-    where: { id },
-    data: { status: UserStatus.BANNED },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id },
+      data: { status: UserStatus.BANNED },
+    }),
+    prisma.banLog.create({
+      data: {
+        targetId: id,
+        adminId,
+        action: BanAction.BAN,
+        reason: reason ?? null,
+      },
+    }),
+  ]);
 
   res.json({ message: `Utilisateur ${user.name} banni avec succès` });
 }
@@ -74,6 +87,8 @@ export async function banUser(req: Request, res: Response): Promise<void> {
 // ─── Débannir un utilisateur ────────────────────────────────────────────────
 export async function unbanUser(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
+  const { reason } = req.body;
+  const adminId = req.user!.id;
 
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
@@ -81,12 +96,36 @@ export async function unbanUser(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  await prisma.user.update({
-    where: { id },
-    data: { status: UserStatus.ACTIVE },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id },
+      data: { status: UserStatus.ACTIVE },
+    }),
+    prisma.banLog.create({
+      data: {
+        targetId: id,
+        adminId,
+        action: BanAction.UNBAN,
+        reason: reason ?? null,
+      },
+    }),
+  ]);
 
   res.json({ message: `Utilisateur ${user.name} réactivé` });
+}
+
+// ─── Journal des bannissements ──────────────────────────────────────────────
+export async function getBanLogs(_req: Request, res: Response): Promise<void> {
+  const logs = await prisma.banLog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    include: {
+      target: { select: { id: true, name: true, email: true } },
+      admin:  { select: { id: true, name: true } },
+    },
+  });
+
+  res.json({ logs });
 }
 
 // ─── Lister les demandes KYC ────────────────────────────────────────────────
@@ -144,7 +183,7 @@ export async function reviewKyc(req: Request, res: Response): Promise<void> {
     });
   }
 
-  // Notification à l'utilisateur
+  // Notification in-app à l'utilisateur
   await prisma.notification.create({
     data: {
       userId: kyc.userId,
@@ -155,6 +194,14 @@ export async function reviewKyc(req: Request, res: Response): Promise<void> {
           : `Votre demande KYC a été rejetée. ${note ?? ""}`,
     },
   });
+
+  // Email à l'utilisateur
+  await sendKycStatusEmail(
+    kyc.user.email,
+    kyc.user.name,
+    newStatus === KycStatus.APPROVED ? "APPROVED" : "REJECTED",
+    note
+  );
 
   res.json({ message: `KYC ${action === "approve" ? "approuvé" : "rejeté"}` });
 }

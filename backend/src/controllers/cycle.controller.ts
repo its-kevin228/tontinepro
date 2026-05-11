@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { CycleStatus, MembershipRole } from "@prisma/client";
+import { getPlatformFees, computeNetPayout } from "../lib/fees.js";
 
 // ─── Démarrer un cycle ──────────────────────────────────────────────────────
 export async function createCycle(req: Request, res: Response): Promise<void> {
@@ -129,15 +130,41 @@ export async function closeCycle(req: Request, res: Response): Promise<void> {
     },
   });
 
-  // Créer une notification pour tous les membres
+  // ── Calcul de la cagnotte avec frais de service ──────────────────────────
+  const confirmedPayments = await prisma.payment.findMany({
+    where: { cycleId, status: "CONFIRMED" },
+    select: { amount: true },
+  });
+
+  const grossAmount = confirmedPayments.reduce((sum, p) => sum + p.amount, 0);
+  const { serviceFeeRate } = await getPlatformFees();
+  const payout = computeNetPayout(grossAmount, serviceFeeRate);
+
+  // ── Notifications ────────────────────────────────────────────────────────
   const memberIds = cycle.circle.memberships.map((m) => m.userId);
+
+  const beneficiaryName =
+    cycle.circle.memberships.find((m) => m.userId === beneficiaryId)?.userId ?? "le bénéficiaire";
+
   await prisma.notification.createMany({
     data: memberIds.map((uid) => ({
       userId: uid,
-      title: "Cycle clôturé",
-      body: `Le cycle #${cycle.number} a été clôturé.`,
+      title: "Cycle clôturé 🎉",
+      body:
+        uid === beneficiaryId
+          ? `Félicitations ! Vous recevez la cagnotte du cycle #${cycle.number} : ${payout.net.toLocaleString("fr-FR")} FCFA (après ${payout.fee.toLocaleString("fr-FR")} FCFA de frais).`
+          : `Le cycle #${cycle.number} est clôturé. Cagnotte versée : ${payout.net.toLocaleString("fr-FR")} FCFA.`,
     })),
   });
 
-  res.json({ message: "Cycle clôturé avec succès", cycle: closedCycle });
+  res.json({
+    message: "Cycle clôturé avec succès",
+    cycle: closedCycle,
+    payout: {
+      gross: payout.gross,
+      serviceFee: payout.fee,
+      net: payout.net,
+      serviceFeeRate: `${(serviceFeeRate * 100).toFixed(2)}%`,
+    },
+  });
 }

@@ -24,9 +24,12 @@ model User {
   updatedAt DateTime   @updatedAt
 
   memberships   Membership[]
+  createdCircles Circle[]
   kycRequest    KycRequest?
   payments      Payment[]
   notifications Notification[]
+  banLogsAsTarget BanLog[] @relation("BanTarget")
+  banLogsAsAdmin  BanLog[] @relation("BanAdmin")
 }
 
 enum UserRole {
@@ -45,6 +48,7 @@ enum UserStatus {
 
 model Circle {
   id          String       @id @default(cuid())
+  creatorId   String
   name        String
   description String?
   amount      Float
@@ -55,6 +59,7 @@ model Circle {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  creator     User         @relation(fields: [creatorId], references: [id])
   memberships Membership[]
   cycles      Cycle[]
   invitations Invitation[]
@@ -208,4 +213,23 @@ model PlatformSetting {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// ─── Ban Log ───────────────────────────────────────────────────────────────
+
+model BanLog {
+  id        String   @id @default(cuid())
+  targetId  String
+  adminId   String
+  action    BanAction
+  reason    String?
+  createdAt DateTime @default(now())
+
+  target User @relation("BanTarget", fields: [targetId], references: [id])
+  admin  User @relation("BanAdmin",  fields: [adminId],  references: [id])
+}
+
+enum BanAction {
+  BAN
+  UNBAN
 }

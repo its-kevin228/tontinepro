@@ -8,6 +8,7 @@ import {
   reviewKyc,
   getSettings,
   updateSetting,
+  getBanLogs,
 } from "../controllers/admin.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireRole } from "../middlewares/requireRole.js";
@@ -180,5 +181,7 @@ router.get("/settings", ...adminOnly, getSettings);
  *         description: Paramètre mis à jour
  */
 router.patch("/settings", ...adminOnly, updateSetting);
+
+router.get("/ban-logs", ...adminOnly, getBanLogs);
 
 export default router;

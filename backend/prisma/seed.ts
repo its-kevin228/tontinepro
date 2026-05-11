@@ -13,24 +13,26 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@tontinepro.com" },
-    update: {},
+    update: { isVerified: true },
     create: {
       name: "Super Admin",
       email: "admin@tontinepro.com",
       password,
       role: UserRole.SUPER_ADMIN,
+      isVerified: true,
     },
   });
   console.log("✅ Super Admin créé :", admin.email);
 
   const organisateur = await prisma.user.upsert({
     where: { email: "kevin@tontinepro.com" },
-    update: {},
+    update: { isVerified: true },
     create: {
       name: "Kevin Organisateur",
       email: "kevin@tontinepro.com",
       password,
       role: UserRole.ORGANISATEUR,
+      isVerified: true,
     },
   });
   console.log("✅ Organisateur créé :", organisateur.email);
@@ -39,12 +41,13 @@ async function main() {
   for (let i = 1; i <= 4; i++) {
     const m = await prisma.user.upsert({
       where: { email: `membre${i}@test.com` },
-      update: {},
+      update: { isVerified: true },
       create: {
         name: `Membre ${i}`,
         email: `membre${i}@test.com`,
         password,
         role: UserRole.MEMBRE,
+        isVerified: true,
       },
     });
     membres.push(m);
@@ -66,6 +69,7 @@ async function main() {
       maxMembers: 5,
       isPublic: false,
       status: CircleStatus.ACTIVE,
+      creatorId: organisateur.id,
     },
   });
   console.log("\n✅ Cercle créé :", circle.name);
@@ -191,16 +195,16 @@ async function main() {
   // 8. PARAMÈTRES PLATEFORME
   // ──────────────────────────────────────────────────────────────────────────
   await prisma.platformSetting.upsert({
-    where: { key: "service_fee_percent" },
+    where: { key: "service_fee" },
     update: {},
-    create: { key: "service_fee_percent", value: "2" },
+    create: { key: "service_fee", value: "1" },   // 1% sur la cagnotte à la clôture
   });
   await prisma.platformSetting.upsert({
-    where: { key: "max_circles_per_user" },
+    where: { key: "transaction_fee" },
     update: {},
-    create: { key: "max_circles_per_user", value: "5" },
+    create: { key: "transaction_fee", value: "50" }, // 50 FCFA par paiement Mobile Money
   });
-  console.log("✅ 2 paramètres plateforme créés\n");
+  console.log("✅ 2 paramètres plateforme créés (service_fee=1%, transaction_fee=50 FCFA)\n");
 
   // ──────────────────────────────────────────────────────────────────────────
   console.log("═══════════════════════════════════════════════════");

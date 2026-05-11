@@ -25,6 +25,10 @@ export async function getMe(req: Request, res: Response): Promise<void> {
           circle: { select: { id: true, name: true, status: true, amount: true, frequency: true } },
         },
       },
+      // On ajoute les cercles créés pour savoir si l'utilisateur est organisateur
+      createdCircles: {
+        select: { id: true }
+      }
     },
   });
 

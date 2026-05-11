@@ -6,11 +6,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { fetchApi } from "@/lib/api";
-import { ArrowRight, Lock, Mail, Loader2 } from "lucide-react";
+import { ArrowRight, Lock, Mail, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function LoginPage() {
 
       login(data.token, data.user);
       
-      if (data.user.role === "ADMIN") {
+      if (data.user.role === "SUPER_ADMIN") {
         router.push("/admin/dashboard");
       } else {
         router.push("/dashboard");
@@ -103,13 +104,21 @@ export default function LoginPage() {
                 <Lock className="h-5 w-5 text-[#2d334a]/30 group-focus-within:text-[#272343] transition-colors" />
               </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
-                className="block w-full h-14 pl-12 pr-4 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
+                className="block w-full h-14 pl-12 pr-12 bg-[#e3f6f5]/20 border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] focus:border-transparent transition-all placeholder:text-[#2d334a]/20"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#2d334a]/30 hover:text-[#272343] transition-colors"
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
           </div>
 

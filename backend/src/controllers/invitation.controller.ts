@@ -3,6 +3,48 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { InvitationStatus, MembershipRole } from "@prisma/client";
 
+// PATCH /api/invitations/:token/revoke
+export async function revokeInvitation(req: Request, res: Response): Promise<void> {
+  const { token } = req.params;
+  const userId = req.user!.id;
+
+  try {
+    const invitation = await prisma.invitation.findUnique({
+      where: { token },
+    });
+
+    if (!invitation) {
+      res.status(404).json({ error: "Invitation introuvable" });
+      return;
+    }
+
+    if (invitation.status !== InvitationStatus.PENDING) {
+      res.status(400).json({ error: "Seule une invitation en attente peut être révoquée" });
+      return;
+    }
+
+    // Vérifier que l'appelant est organisateur du cercle
+    const membership = await prisma.membership.findUnique({
+      where: { userId_circleId: { userId, circleId: invitation.circleId } },
+    });
+
+    if (!membership || membership.role !== MembershipRole.ORGANISATEUR) {
+      res.status(403).json({ error: "Seul l'organisateur peut révoquer une invitation" });
+      return;
+    }
+
+    await prisma.invitation.update({
+      where: { token },
+      data: { status: InvitationStatus.REVOKED },
+    });
+
+    res.json({ message: "Invitation révoquée avec succès" });
+  } catch (error) {
+    console.error("Erreur révocation invitation:", error);
+    res.status(500).json({ error: "Erreur lors de la révocation" });
+  }
+}
+
 const createInvitationSchema = z.object({
   email: z.string().email("Email invalide").optional(),
   expiresInDays: z.number().int().min(1).max(30).default(7),
