@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
+import { useNotifications } from "@/lib/notification-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
@@ -10,9 +11,10 @@ import {
   ShieldCheck,
   Users,
   Settings,
-  Bell,
   LogOut,
   ScrollText,
+  Bell,
+  X,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +27,7 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
+  const { unreadCount, toast, dismissToast } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -119,6 +122,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className="pt-32 pb-20 px-6">
         <div className="max-w-[1200px] mx-auto">{children}</div>
       </main>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-[#272343] text-white rounded-2xl shadow-2xl p-4 pr-10 max-w-sm w-full relative">
+            <button
+              onClick={dismissToast}
+              className="absolute top-3 right-3 p-1 text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[#ffd803]/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                <Bell className="h-4 w-4 text-[#ffd803]" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-white leading-tight">{toast.title}</p>
+                <p className="text-xs text-white/60 font-medium mt-1 leading-relaxed line-clamp-2">
+                  {toast.body}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

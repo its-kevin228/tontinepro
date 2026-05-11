@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchApi } from "@/lib/api";
-import {
-  Bell,
-  BellOff,
-  CheckCheck,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
+import { CheckCheck, Loader2, RefreshCw, BellOff } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -50,9 +44,7 @@ export default function NotificationsPage() {
         prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err: any) {
-      console.error(err);
-    }
+    } catch {}
   };
 
   const handleMarkAllAsRead = async () => {
@@ -75,7 +67,6 @@ export default function NotificationsPage() {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-
     if (diffMins < 1) return "À l'instant";
     if (diffMins < 60) return `Il y a ${diffMins} min`;
     if (diffHours < 24) return `Il y a ${diffHours}h`;
@@ -84,120 +75,102 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-black text-[#272343] tracking-tight flex items-center gap-3">
-            <Bell className="h-8 w-8 text-[#ffd803]" />
+          <h1 className="text-2xl font-black text-[#272343] tracking-tight">
             Notifications
             {unreadCount > 0 && (
-              <span className="text-sm font-black bg-[#f25f4c] text-white px-2.5 py-1 rounded-full">
+              <span className="ml-2 text-xs font-black bg-[#272343] text-[#ffd803] px-2 py-0.5 rounded-full align-middle">
                 {unreadCount}
               </span>
             )}
           </h1>
-          <p className="text-[#2d334a]/60 font-medium mt-1">
-            Vos alertes et messages système.
+          <p className="text-sm text-[#2d334a]/40 font-medium mt-0.5">
+            {notifications.length} message{notifications.length !== 1 ? "s" : ""}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
               disabled={markingAll}
-              className="flex items-center gap-2 px-5 py-3 bg-[#272343] text-[#ffd803] rounded-xl font-black text-sm hover:bg-[#1a1730] transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-black text-[#272343] border border-[#dfe5f2] rounded-xl hover:bg-[#f8fafc] transition-all disabled:opacity-50"
             >
               {markingAll ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <CheckCheck className="h-4 w-4" />
+                <CheckCheck className="h-3.5 w-3.5" />
               )}
-              Tout marquer lu
+              Tout lire
             </button>
           )}
           <button
             onClick={fetchNotifications}
             disabled={loading}
-            className="flex items-center gap-2 px-5 py-3 bg-[#f8fafc] border border-[#dfe5f2] rounded-xl font-bold text-sm text-[#272343] hover:bg-[#e3f6f5] transition-all disabled:opacity-50"
+            className="p-2 text-[#2d334a]/40 hover:text-[#272343] hover:bg-[#f8fafc] rounded-xl transition-all disabled:opacity-50"
+            title="Actualiser"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Actualiser
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-[#f25f4c]/10 border border-[#f25f4c]/20 text-[#f25f4c] rounded-2xl font-bold text-sm">
-          {error}
-        </div>
+        <p className="text-sm text-[#f25f4c] font-medium">{error}</p>
       )}
 
       {/* Liste */}
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-px">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="card-base h-20 animate-pulse bg-[#f8fafc] border-[#f0f0f0]" />
+            <div key={i} className="h-16 bg-[#f8fafc] animate-pulse rounded-2xl" />
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <div className="card-base text-center py-24">
-          <BellOff className="h-12 w-12 text-[#2d334a]/20 mx-auto mb-4" />
-          <p className="font-black text-[#272343] text-lg">Aucune notification</p>
-          <p className="text-[#2d334a]/60 font-medium mt-1">
-            Vous êtes à jour. Revenez plus tard.
-          </p>
+        <div className="text-center py-20">
+          <BellOff className="h-8 w-8 text-[#2d334a]/20 mx-auto mb-3" />
+          <p className="font-bold text-[#272343]">Aucune notification</p>
+          <p className="text-sm text-[#2d334a]/40 font-medium mt-1">Vous êtes à jour.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-[#dfe5f2]">
           {notifications.map((notif) => (
             <div
               key={notif.id}
               onClick={() => !notif.read && handleMarkAsRead(notif.id)}
-              className={`card-base flex items-start gap-4 transition-all cursor-pointer ${
+              className={`flex items-start gap-4 py-4 transition-all ${
                 notif.read
-                  ? "opacity-60 hover:opacity-80"
-                  : "border-l-4 border-l-[#ffd803] hover:border-[#ffd803]"
+                  ? "cursor-default"
+                  : "cursor-pointer hover:bg-[#f8fafc] -mx-3 px-3 rounded-2xl"
               }`}
             >
-              {/* Indicateur non lu */}
-              <div className="shrink-0 mt-1">
+              {/* Point lu / non lu */}
+              <div className="mt-1.5 shrink-0">
                 {notif.read ? (
-                  <div className="w-3 h-3 rounded-full bg-[#dfe5f2]" />
+                  <div className="w-2 h-2 rounded-full bg-[#dfe5f2]" />
                 ) : (
-                  <div className="w-3 h-3 rounded-full bg-[#ffd803] shadow-[0_0_6px_rgba(255,216,3,0.6)]" />
+                  <div className="w-2 h-2 rounded-full bg-[#272343]" />
                 )}
               </div>
 
               {/* Contenu */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <p className={`font-black text-[#272343] ${notif.read ? "" : "text-[#272343]"}`}>
+                <div className="flex items-baseline justify-between gap-4">
+                  <p className={`text-sm font-black text-[#272343] ${notif.read ? "opacity-50" : ""}`}>
                     {notif.title}
                   </p>
-                  <span className="text-[10px] font-bold text-[#2d334a]/40 uppercase tracking-widest shrink-0">
+                  <span className="text-[10px] text-[#2d334a]/30 font-medium shrink-0">
                     {formatDate(notif.createdAt)}
                   </span>
                 </div>
-                <p className="text-sm text-[#2d334a]/60 font-medium mt-1 leading-relaxed">
+                <p className={`text-sm text-[#2d334a]/60 font-medium mt-0.5 leading-relaxed ${notif.read ? "opacity-50" : ""}`}>
                   {notif.body}
                 </p>
               </div>
-
-              {/* Action marquer lu */}
-              {!notif.read && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMarkAsRead(notif.id);
-                  }}
-                  className="shrink-0 p-2 bg-[#f8fafc] border border-[#dfe5f2] rounded-xl hover:bg-[#e3f6f5] transition-all"
-                  title="Marquer comme lu"
-                >
-                  <CheckCheck className="h-4 w-4 text-[#272343]" />
-                </button>
-              )}
             </div>
           ))}
         </div>

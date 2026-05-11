@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
+import { useNotifications } from "@/lib/notification-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import {
@@ -12,16 +13,17 @@ import {
   PieChart,
   User,
   Clock,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
+  const { unreadCount, toast, dismissToast, resetUnread } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Rediriger vers /login si non authentifié
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/login");
@@ -29,7 +31,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, loading, router]);
 
   const isMemberView = pathname?.startsWith("/dashboard/member");
+  const isNotifPage = pathname === "/dashboard/notifications";
   const showSwitch = user?.role === "SUPER_ADMIN" || user?.role === "ORGANISATEUR";
+
+  // Quand l'utilisateur est sur la page notifications, on remet le compteur à 0 visuellement
+  useEffect(() => {
+    if (isNotifPage) resetUnread();
+  }, [isNotifPage, resetUnread]);
 
   const navItems = isMemberView
     ? [
@@ -43,7 +51,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: "Statistiques", href: "/dashboard/analytics", icon: PieChart },
       ];
 
-  // Spinner pendant la vérification du token
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-[#fffffe] flex items-center justify-center">
@@ -110,12 +117,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="h-8 w-[1px] bg-[#dfe5f2] mx-2 hidden sm:block" />
 
+            {/* Cloche avec badge dynamique */}
             <Link
               href="/dashboard/notifications"
-              className="p-2 text-[#2d334a]/40 hover:text-[#272343] hover:bg-[#f8fafc] rounded-xl transition-all relative"
+              className="relative p-2 text-[#2d334a]/40 hover:text-[#272343] hover:bg-[#f8fafc] rounded-xl transition-all"
             >
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#f25f4c] rounded-full border-2 border-white" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#f25f4c] text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
 
             <div className="flex items-center gap-3 pl-2">
@@ -144,6 +156,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="pt-32 pb-20 px-6">
         <div className="max-w-[1200px] mx-auto">{children}</div>
       </main>
+
+      {/* Toast de notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-[#272343] text-white rounded-2xl shadow-2xl p-4 pr-10 max-w-sm w-full relative">
+            {/* Barre de progression */}
+            <div className="absolute bottom-0 left-0 h-0.5 bg-[#ffd803] rounded-full animate-[shrink_5s_linear_forwards]"
+              style={{ width: "100%" }}
+            />
+
+            <button
+              onClick={dismissToast}
+              className="absolute top-3 right-3 p-1 text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[#ffd803]/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                <Bell className="h-4 w-4 text-[#ffd803]" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-white leading-tight">{toast.title}</p>
+                <p className="text-xs text-white/60 font-medium mt-1 leading-relaxed line-clamp-2">
+                  {toast.body}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

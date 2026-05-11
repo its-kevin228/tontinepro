@@ -128,10 +128,9 @@ export default function AnalyticsPage() {
             className="bg-white p-6 rounded-[24px] border border-[#dfe5f2] shadow-sm hover:shadow-md transition-all group"
           >
             <div className="flex justify-between items-start mb-4">
-              <stat.icon
-                size={22}
-                className="text-[#2d334a]/30 group-hover:text-[#272343] transition-colors"
-              />
+              <div className={`p-3 rounded-2xl ${stat.bg} group-hover:scale-110 transition-transform`}>
+                <stat.icon size={22} className="text-[#272343]" />
+              </div>
             </div>
             <p className="text-[#2d334a]/40 text-xs font-bold uppercase tracking-widest leading-none">
               {stat.label}

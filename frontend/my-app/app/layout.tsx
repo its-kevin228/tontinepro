@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/lib/auth-context";
+import { NotificationProvider } from "@/lib/notification-context";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -23,17 +24,14 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={cn(
-        "h-full",
-        "antialiased",
-        poppins.variable,
-        "font-sans"
-      )}
+      className={cn("h-full", "antialiased", poppins.variable, "font-sans")}
       suppressHydrationWarning
     >
       <body className={cn("min-h-full flex flex-col bg-background text-text-primary")}>
         <AuthProvider>
-          {children}
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

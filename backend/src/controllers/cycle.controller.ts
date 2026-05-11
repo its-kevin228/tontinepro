@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { CycleStatus, MembershipRole } from "@prisma/client";
 import { getPlatformFees, computeNetPayout } from "../lib/fees.js";
+import { notifyUsers, notifyUser } from "../lib/sse.js";
 
 // ─── Démarrer un cycle ──────────────────────────────────────────────────────
 export async function createCycle(req: Request, res: Response): Promise<void> {
@@ -140,22 +141,20 @@ export async function closeCycle(req: Request, res: Response): Promise<void> {
   const { serviceFeeRate } = await getPlatformFees();
   const payout = computeNetPayout(grossAmount, serviceFeeRate);
 
-  // ── Notifications ────────────────────────────────────────────────────────
+  // ── Notifications SSE + in-app ───────────────────────────────────────────
   const memberIds = cycle.circle.memberships.map((m) => m.userId);
 
-  const beneficiaryName =
-    cycle.circle.memberships.find((m) => m.userId === beneficiaryId)?.userId ?? "le bénéficiaire";
-
-  await prisma.notification.createMany({
-    data: memberIds.map((uid) => ({
-      userId: uid,
-      title: "Cycle clôturé 🎉",
-      body:
+  await Promise.all(
+    memberIds.map((uid) =>
+      notifyUser(
+        uid,
+        "Cycle clôturé 🎉",
         uid === beneficiaryId
           ? `Félicitations ! Vous recevez la cagnotte du cycle #${cycle.number} : ${payout.net.toLocaleString("fr-FR")} FCFA (après ${payout.fee.toLocaleString("fr-FR")} FCFA de frais).`
-          : `Le cycle #${cycle.number} est clôturé. Cagnotte versée : ${payout.net.toLocaleString("fr-FR")} FCFA.`,
-    })),
-  });
+          : `Le cycle #${cycle.number} est clôturé. Cagnotte versée : ${payout.net.toLocaleString("fr-FR")} FCFA.`
+      )
+    )
+  );
 
   res.json({
     message: "Cycle clôturé avec succès",

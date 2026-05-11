@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { prisma } from "../lib/prisma.js";
 import { sendReminderEmail } from "../lib/mail.js";
+import { notifyUser } from "../lib/sse.js";
 
 /**
  * Rappel de cotisation — tourne tous les jours à 9h00
@@ -49,15 +50,14 @@ export function startReminderJob(): void {
 
         if (unpaidMembers.length === 0) continue;
 
-        // 1. Notifications in-app (batch)
-        await prisma.notification.createMany({
-          data: unpaidMembers.map((m) => ({
-            userId: m.userId,
-            title: "⏰ Rappel de cotisation",
-            body: `Votre cotisation de ${cycle.circle.amount.toLocaleString("fr-FR")} FCFA pour "${cycle.circle.name}" est due dans moins de 24h (Cycle #${cycle.number}).`,
-          })),
-          skipDuplicates: true,
-        });
+        // 1. Notifications in-app + SSE (une par une pour le push temps réel)
+        for (const m of unpaidMembers) {
+          await notifyUser(
+            m.userId,
+            "⏰ Rappel de cotisation",
+            `Votre cotisation de ${cycle.circle.amount.toLocaleString("fr-FR")} FCFA pour "${cycle.circle.name}" est due dans moins de 24h (Cycle #${cycle.number}).`
+          );
+        }
         notifCount += unpaidMembers.length;
 
         // 2. Emails (envoi individuel pour personnalisation)

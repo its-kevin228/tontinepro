@@ -1,6 +1,42 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
+import { addConnection, removeConnection } from "../lib/sse.js";
 
+// ─── Stream SSE — connexion temps réel ─────────────────────────────────────
+export async function streamNotifications(req: Request, res: Response): Promise<void> {
+  const userId = req.user!.id;
+
+  // Headers SSE obligatoires
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // désactive le buffering nginx
+  res.flushHeaders();
+
+  // Enregistrer la connexion
+  addConnection(userId, res);
+
+  // Envoyer l'état initial immédiatement
+  const unreadCount = await prisma.notification.count({
+    where: { userId, read: false },
+  });
+  res.write(`data: ${JSON.stringify({ type: "init", unreadCount })}\n\n`);
+
+  // Heartbeat toutes les 25s pour garder la connexion vivante
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(": heartbeat\n\n");
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 25000);
+
+  // Nettoyage quand le client se déconnecte
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    removeConnection(userId, res);
+  });
+}
 // ─── Mes notifications ──────────────────────────────────────────────────────
 export async function getNotifications(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;

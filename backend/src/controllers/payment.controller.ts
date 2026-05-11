@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { PaymentMethod, PaymentStatus, MembershipRole } from "@prisma/client";
 import { getPlatformFees } from "../lib/fees.js";
 import { sendPaymentConfirmationEmail } from "../lib/mail.js";
+import { notifyUser } from "../lib/sse.js";
 
 // ─── Enregistrer un paiement (par l'organisateur) ──────────────────────────
 export async function createPayment(req: Request, res: Response): Promise<void> {
@@ -143,14 +144,12 @@ export async function confirmPayment(req: Request, res: Response): Promise<void>
     data: { status: PaymentStatus.CONFIRMED, confirmedAt: new Date() },
   });
 
-  // Notification in-app au membre
-  await prisma.notification.create({
-    data: {
-      userId: payment.userId,
-      title: "Paiement confirmé ✅",
-      body: `Votre paiement de ${payment.amount} FCFA a été confirmé.`,
-    },
-  });
+  // Notification in-app + SSE au membre
+  await notifyUser(
+    payment.userId,
+    "Paiement confirmé ✅",
+    `Votre paiement de ${payment.amount} FCFA a été confirmé.`
+  );
 
   // Email de confirmation
   const member = await prisma.user.findUnique({
@@ -207,14 +206,12 @@ export async function rejectPayment(req: Request, res: Response): Promise<void> 
     data: { status: PaymentStatus.REJECTED },
   });
 
-  // Notification au membre
-  await prisma.notification.create({
-    data: {
-      userId: payment.userId,
-      title: "Paiement rejeté ❌",
-      body: `Votre paiement de ${payment.amount} FCFA a été rejeté. Contactez votre organisateur.`,
-    },
-  });
+  // Notification in-app + SSE au membre
+  await notifyUser(
+    payment.userId,
+    "Paiement rejeté ❌",
+    `Votre paiement de ${payment.amount} FCFA a été rejeté. Contactez votre organisateur.`
+  );
 
   res.json({ message: "Paiement rejeté", payment: updated });
 }
@@ -473,13 +470,11 @@ export async function initMobileMoneyPayment(req: Request, res: Response): Promi
         data: { status: PaymentStatus.CONFIRMED, confirmedAt: new Date() },
       });
 
-      await prisma.notification.create({
-        data: {
-          userId,
-          title: "Paiement Mobile Money confirmé ✅",
-          body: `Votre cotisation de ${baseAmount.toLocaleString("fr-FR")} FCFA${transactionFee > 0 ? ` (+ ${transactionFee} FCFA de frais)` : ""} a été confirmée.`,
-        },
-      });
+      await notifyUser(
+        userId,
+        "Paiement Mobile Money confirmé ✅",
+        `Votre cotisation de ${baseAmount.toLocaleString("fr-FR")} FCFA${transactionFee > 0 ? ` (+ ${transactionFee} FCFA de frais)` : ""} a été confirmée.`
+      );
     } catch (err) {
       console.error("[MockMobileMoney] Erreur confirmation:", err);
     }

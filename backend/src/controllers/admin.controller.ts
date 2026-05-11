@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { KycStatus, UserStatus, BanAction } from "@prisma/client";
 import { sendKycStatusEmail } from "../lib/mail.js";
+import { notifyUser } from "../lib/sse.js";
 
 // ─── Dashboard global ───────────────────────────────────────────────────────
 export async function getDashboard(_req: Request, res: Response): Promise<void> {
@@ -183,17 +184,14 @@ export async function reviewKyc(req: Request, res: Response): Promise<void> {
     });
   }
 
-  // Notification in-app à l'utilisateur
-  await prisma.notification.create({
-    data: {
-      userId: kyc.userId,
-      title: newStatus === KycStatus.APPROVED ? "KYC approuvé ✅" : "KYC rejeté ❌",
-      body:
-        newStatus === KycStatus.APPROVED
-          ? "Votre identité a été vérifiée. Vous pouvez maintenant créer des cercles."
-          : `Votre demande KYC a été rejetée. ${note ?? ""}`,
-    },
-  });
+  // Notification in-app + SSE à l'utilisateur
+  await notifyUser(
+    kyc.userId,
+    newStatus === KycStatus.APPROVED ? "KYC approuvé ✅" : "KYC rejeté ❌",
+    newStatus === KycStatus.APPROVED
+      ? "Votre identité a été vérifiée. Vous pouvez maintenant créer des cercles."
+      : `Votre demande KYC a été rejetée. ${note ?? ""}`
+  );
 
   // Email à l'utilisateur
   await sendKycStatusEmail(
