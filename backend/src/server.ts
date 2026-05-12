@@ -10,6 +10,7 @@ import paymentRoutes from "./routes/payment.routes";
 import notificationRoutes from "./routes/notification.routes";
 import cycleRoutes, { closeCycleRoute } from "./routes/cycle.routes";
 import analyticsRoutes from "./routes/analytics.routes";
+import disputeRoutes from "./routes/dispute.routes";
 import { startReminderJob } from "./jobs/reminder.job";
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/circles/:id/cycles", cycleRoutes);
 app.use("/api/cycles", closeCycleRoute);
 app.use("/api/organizer", analyticsRoutes);
+app.use("/api/disputes", disputeRoutes);
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {

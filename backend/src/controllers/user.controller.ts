@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
+import bcrypt from "bcryptjs";
 
 // ─── Mon profil ─────────────────────────────────────────────────────────────
 export async function getMe(req: Request, res: Response): Promise<void> {
@@ -16,6 +17,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
       image: true,
       createdAt: true,
       kycRequest: { select: { status: true, createdAt: true } },
+      notificationPreference: true,
       memberships: {
         select: {
           id: true,
@@ -25,10 +27,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
           circle: { select: { id: true, name: true, status: true, amount: true, frequency: true } },
         },
       },
-      // On ajoute les cercles créés pour savoir si l'utilisateur est organisateur
-      createdCircles: {
-        select: { id: true }
-      }
+      createdCircles: { select: { id: true } },
     },
   });
 
@@ -38,18 +37,79 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 // ─── Modifier mon profil ────────────────────────────────────────────────────
 export async function updateMe(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;
-  const { name, image } = req.body;
+  const { name, image, phone, currentPassword, newPassword } = req.body;
+
+  // Si changement de mot de passe demandé
+  if (newPassword) {
+    if (!currentPassword) {
+      res.status(400).json({ error: "Le mot de passe actuel est requis" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "Le nouveau mot de passe doit faire au moins 8 caractères" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    if (!user) { res.status(404).json({ error: "Utilisateur introuvable" }); return; }
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) {
+      res.status(400).json({ error: "Mot de passe actuel incorrect" });
+      return;
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+  }
 
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
-      ...(name && { name }),
+      ...(name?.trim() && { name: name.trim() }),
       ...(image && { image }),
     },
     select: { id: true, name: true, email: true, image: true, role: true },
   });
 
   res.json({ message: "Profil mis à jour", user: updated });
+}
+
+// ─── Préférences de notification ────────────────────────────────────────────
+export async function getNotifPrefs(req: Request, res: Response): Promise<void> {
+  const userId = req.user!.id;
+
+  const prefs = await prisma.notificationPreference.upsert({
+    where: { userId },
+    update: {},
+    create: { userId },
+  });
+
+  res.json({ preferences: prefs });
+}
+
+export async function updateNotifPrefs(req: Request, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  const { emailReminders, emailPayment, emailKyc, inAppAll } = req.body;
+
+  const prefs = await prisma.notificationPreference.upsert({
+    where: { userId },
+    update: {
+      ...(emailReminders !== undefined && { emailReminders }),
+      ...(emailPayment !== undefined && { emailPayment }),
+      ...(emailKyc !== undefined && { emailKyc }),
+      ...(inAppAll !== undefined && { inAppAll }),
+    },
+    create: {
+      userId,
+      emailReminders: emailReminders ?? true,
+      emailPayment: emailPayment ?? true,
+      emailKyc: emailKyc ?? true,
+      inAppAll: inAppAll ?? true,
+    },
+  });
+
+  res.json({ message: "Préférences mises à jour", preferences: prefs });
 }
 
 // ─── Soumettre une demande KYC ──────────────────────────────────────────────

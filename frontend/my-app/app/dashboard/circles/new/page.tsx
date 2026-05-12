@@ -2,184 +2,238 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Diamond, Target, Calendar, Users, Info } from "lucide-react";
+import { ArrowLeft, Diamond, Calendar, Users, Info, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { API_BASE_URL } from "@/lib/api";
+import { fetchApi } from "@/lib/api";
+
+interface FormErrors {
+  name?: string;
+  amount?: string;
+  maxMembers?: string;
+  startDate?: string;
+}
 
 export default function NewCirclePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [errors, setErrors] = useState<FormErrors>({});
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     amount: "",
     frequency: "MONTHLY",
-    maxMembers: "10",
-    startDate: "",
+    maxMembers: "",
   });
+
+  const validate = (): boolean => {
+    const e: FormErrors = {};
+
+    if (!formData.name.trim()) {
+      e.name = "Le nom du cercle est requis";
+    } else if (formData.name.trim().length < 3) {
+      e.name = "Le nom doit faire au moins 3 caractères";
+    }
+
+    if (!formData.amount) {
+      e.amount = "Le montant de la cotisation est requis";
+    } else if (isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
+      e.amount = "Le montant doit être un nombre positif";
+    } else if (Number(formData.amount) < 500) {
+      e.amount = "Le montant minimum est de 500 FCFA";
+    }
+
+    if (!formData.maxMembers) {
+      e.maxMembers = "Le nombre de membres est requis";
+    } else if (isNaN(Number(formData.maxMembers)) || Number(formData.maxMembers) < 2) {
+      e.maxMembers = "Il faut au moins 2 membres";
+    } else if (Number(formData.maxMembers) > 50) {
+      e.maxMembers = "Maximum 50 membres par cercle";
+    }
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setServerError("");
+    if (!validate()) return;
 
+    setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/circles`, {
+      const data = await fetchApi("/circles", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
-        },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
           amount: Number(formData.amount),
+          frequency: formData.frequency,
           maxMembers: Number(formData.maxMembers),
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Une erreur est survenue");
-      }
-
-      alert("Cercle créé avec succès !");
-      router.push("/dashboard");
+      router.push(`/dashboard/circles/${data.circle.id}`);
     } catch (error: any) {
-      alert(error.message);
+      setServerError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#fffffe] font-sans text-[#272343] p-4 md:p-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Back Button */}
-        <Link 
-          href="/dashboard" 
-          className="inline-flex items-center gap-2 text-[#2d334a]/60 hover:text-[#272343] mb-8 font-medium transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Retour au dashboard
-        </Link>
+  const Field = ({
+    label,
+    error,
+    children,
+  }: {
+    label: string;
+    error?: string;
+    children: React.ReactNode;
+  }) => (
+    <div className="space-y-2">
+      <label className="text-xs font-black uppercase tracking-widest text-[#2d334a]/60">{label}</label>
+      {children}
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-[#f25f4c] font-bold">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
 
-        {/* Header */}
-        <div className="mb-10 text-center md:text-left">
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">Créer un nouveau cercle</h1>
-          <p className="text-[#2d334a]/60">Définissez les règles de votre tontine et invitez vos membres.</p>
+  const inputClass = (hasError?: string) =>
+    `input-base ${hasError ? "border-[#f25f4c] focus:ring-[#f25f4c]" : ""}`;
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-[#2d334a]/40 hover:text-[#272343] mb-4 text-sm font-bold transition-colors group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+          Dashboard
+        </Link>
+        <h1 className="text-3xl font-black text-[#272343] tracking-tight">
+          Nouveau <span className="text-[#ffd803]">Cercle</span>
+        </h1>
+        <p className="text-sm text-[#2d334a]/40 font-medium mt-0.5">
+          Définissez les règles de votre tontine.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} noValidate className="card-base space-y-8">
+
+        {serverError && (
+          <div className="flex items-center gap-3 p-4 bg-[#f25f4c]/10 border border-[#f25f4c]/20 rounded-2xl">
+            <AlertCircle className="h-5 w-5 text-[#f25f4c] shrink-0" />
+            <p className="text-sm text-[#f25f4c] font-bold">{serverError}</p>
+          </div>
+        )}
+
+        {/* Section 1 */}
+        <div className="space-y-5">
+          <h2 className="text-xs font-black uppercase tracking-widest text-[#ffd803]">
+            1. Identité du cercle
+          </h2>
+
+          <Field label="Nom du cercle *" error={errors.name}>
+            <input
+              type="text"
+              placeholder="Ex: Tontine des Entrepreneurs"
+              className={inputClass(errors.name)}
+              value={formData.name}
+              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
+            />
+          </Field>
+
+          <Field label="Description (optionnel)">
+            <textarea
+              placeholder="Expliquez l'objectif de ce cercle…"
+              className="input-base h-24 resize-none"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </Field>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 rounded-[32px] border border-[#dfe5f2] shadow-sm">
-          {/* Section 1: Identité */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[#ffd803]">1. Identité du cercle</h2>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-bold mb-2">Nom du cercle</label>
+        {/* Section 2 */}
+        <div className="space-y-5">
+          <h2 className="text-xs font-black uppercase tracking-widest text-[#ffd803]">
+            2. Configuration financière
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <Field label="Montant de la cotisation (FCFA) *" error={errors.amount}>
+              <div className="relative">
+                <Diamond className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#2d334a]/30" />
                 <input
-                  required
-                  type="text"
-                  placeholder="Ex: Tontine des Entrepreneurs"
-                  className="w-full px-5 py-4 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] transition-all"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  type="number"
+                  placeholder="Ex: 25000"
+                  min="500"
+                  className={`${inputClass(errors.amount)} pl-11`}
+                  value={formData.amount}
+                  onChange={(e) => { setFormData({ ...formData, amount: e.target.value }); setErrors({ ...errors, amount: undefined }); }}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">Description (optionnel)</label>
-                <textarea
-                  placeholder="Expliquez l'objectif de ce cercle..."
-                  className="w-full px-5 py-4 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] transition-all h-24"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
+            </Field>
 
-          {/* Section 2: Configuration financière */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[#ffd803]">2. Configuration Financière</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold mb-2">Montant de la cotisation (FCFA)</label>
-                <div className="relative">
-                  <input
-                    required
-                    type="number"
-                    placeholder="Ex: 50000"
-                    className="w-full pl-12 pr-5 py-4 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] transition-all"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                  />
-                  <Diamond className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#2d334a]/40" />
-                </div>
+            <Field label="Fréquence des tours">
+              <div className="relative">
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#2d334a]/30" />
+                <select
+                  className="input-base pl-11 appearance-none"
+                  value={formData.frequency}
+                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                >
+                  <option value="WEEKLY">Hebdomadaire</option>
+                  <option value="BIWEEKLY">Bimensuelle</option>
+                  <option value="MONTHLY">Mensuelle</option>
+                </select>
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">Fréquence des tours</label>
-                <div className="relative">
-                  <select
-                    className="w-full pl-12 pr-5 py-4 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] transition-all appearance-none"
-                    value={formData.frequency}
-                    onChange={(e) => setFormData({...formData, frequency: e.target.value})}
-                  >
-                    <option value="WEEKLY">Hebdomadaire</option>
-                    <option value="BIWEEKLY">Bimensuelle</option>
-                    <option value="MONTHLY">Mensuelle</option>
-                  </select>
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#2d334a]/40" />
-                </div>
-              </div>
-            </div>
+            </Field>
           </div>
+        </div>
 
-          {/* Section 3: Logistique */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[#ffd803]">3. Logistique & Dates</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold mb-2">Nombre max de membres</label>
-                <div className="relative">
-                  <input
-                    required
-                    type="number"
-                    className="w-full pl-12 pr-5 py-4 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] transition-all"
-                    value={formData.maxMembers}
-                    onChange={(e) => setFormData({...formData, maxMembers: e.target.value})}
-                  />
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#2d334a]/40" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">Date de début prévue</label>
-                <div className="relative">
-                  <input
-                    required
-                    type="date"
-                    className="w-full pl-12 pr-5 py-4 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#ffd803] transition-all"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                  />
-                  <Target className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#2d334a]/40" />
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Section 3 */}
+        <div className="space-y-5">
+          <h2 className="text-xs font-black uppercase tracking-widest text-[#ffd803]">
+            3. Membres
+          </h2>
 
-          <div className="pt-6 border-t border-[#dfe5f2] flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex gap-2 text-[12px] text-[#2d334a]/60 italic items-start">
-              <Info className="h-4 w-4 shrink-0" />
-              <p>Une fois le cercle lancé, certains paramètres ne pourront plus être modifiés.</p>
+          <Field label="Nombre maximum de membres *" error={errors.maxMembers}>
+            <div className="relative">
+              <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#2d334a]/30" />
+              <input
+                type="number"
+                placeholder="Ex: 10"
+                min="2"
+                max="50"
+                className={`${inputClass(errors.maxMembers)} pl-11`}
+                value={formData.maxMembers}
+                onChange={(e) => { setFormData({ ...formData, maxMembers: e.target.value }); setErrors({ ...errors, maxMembers: undefined }); }}
+              />
             </div>
-            <button
-              disabled={loading}
-              type="submit"
-              className="w-full md:w-auto px-10 py-4 bg-[#272343] text-white rounded-2xl font-bold hover:bg-[#2d334a] active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {loading ? "Création en cours..." : "Confirmer la création"}
-            </button>
+          </Field>
+        </div>
+
+        {/* Footer */}
+        <div className="pt-4 border-t border-[#dfe5f2] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-2 text-xs text-[#2d334a]/40 font-medium">
+            <Info className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>Une fois créé, certains paramètres ne pourront plus être modifiés.</p>
           </div>
-        </form>
-      </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary flex items-center gap-2 px-8 py-4 disabled:opacity-50 shrink-0"
+          >
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+            {loading ? "Création…" : "Créer le cercle"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
