@@ -10,7 +10,32 @@ interface FormErrors {
   name?: string;
   amount?: string;
   maxMembers?: string;
-  startDate?: string;
+}
+
+// ── Défini EN DEHORS du composant pour éviter le re-mount à chaque frappe ──
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-black uppercase tracking-widest text-[#2d334a]/60">
+        {label}
+      </label>
+      {children}
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-[#f25f4c] font-bold">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function NewCirclePage() {
@@ -19,36 +44,37 @@ export default function NewCirclePage() {
   const [serverError, setServerError] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    amount: "",
-    frequency: "MONTHLY",
-    maxMembers: "",
-  });
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [frequency, setFrequency] = useState("MONTHLY");
+  const [maxMembers, setMaxMembers] = useState("");
+
+  const clearError = (field: keyof FormErrors) =>
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
 
   const validate = (): boolean => {
     const e: FormErrors = {};
 
-    if (!formData.name.trim()) {
+    if (!name.trim()) {
       e.name = "Le nom du cercle est requis";
-    } else if (formData.name.trim().length < 3) {
+    } else if (name.trim().length < 3) {
       e.name = "Le nom doit faire au moins 3 caractères";
     }
 
-    if (!formData.amount) {
+    if (!amount) {
       e.amount = "Le montant de la cotisation est requis";
-    } else if (isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
+    } else if (isNaN(Number(amount)) || Number(amount) <= 0) {
       e.amount = "Le montant doit être un nombre positif";
-    } else if (Number(formData.amount) < 500) {
+    } else if (Number(amount) < 500) {
       e.amount = "Le montant minimum est de 500 FCFA";
     }
 
-    if (!formData.maxMembers) {
+    if (!maxMembers) {
       e.maxMembers = "Le nombre de membres est requis";
-    } else if (isNaN(Number(formData.maxMembers)) || Number(formData.maxMembers) < 2) {
+    } else if (isNaN(Number(maxMembers)) || Number(maxMembers) < 2) {
       e.maxMembers = "Il faut au moins 2 membres";
-    } else if (Number(formData.maxMembers) > 50) {
+    } else if (Number(maxMembers) > 50) {
       e.maxMembers = "Maximum 50 membres par cercle";
     }
 
@@ -66,11 +92,11 @@ export default function NewCirclePage() {
       const data = await fetchApi("/circles", {
         method: "POST",
         body: JSON.stringify({
-          name: formData.name.trim(),
-          description: formData.description.trim() || undefined,
-          amount: Number(formData.amount),
-          frequency: formData.frequency,
-          maxMembers: Number(formData.maxMembers),
+          name: name.trim(),
+          description: description.trim() || undefined,
+          amount: Number(amount),
+          frequency,
+          maxMembers: Number(maxMembers),
         }),
       });
       router.push(`/dashboard/circles/${data.circle.id}`);
@@ -80,27 +106,6 @@ export default function NewCirclePage() {
       setLoading(false);
     }
   };
-
-  const Field = ({
-    label,
-    error,
-    children,
-  }: {
-    label: string;
-    error?: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="space-y-2">
-      <label className="text-xs font-black uppercase tracking-widest text-[#2d334a]/60">{label}</label>
-      {children}
-      {error && (
-        <p className="flex items-center gap-1.5 text-xs text-[#f25f4c] font-bold">
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
 
   const inputClass = (hasError?: string) =>
     `input-base ${hasError ? "border-[#f25f4c] focus:ring-[#f25f4c]" : ""}`;
@@ -132,7 +137,7 @@ export default function NewCirclePage() {
           </div>
         )}
 
-        {/* Section 1 */}
+        {/* Section 1 — Identité */}
         <div className="space-y-5">
           <h2 className="text-xs font-black uppercase tracking-widest text-[#ffd803]">
             1. Identité du cercle
@@ -143,8 +148,8 @@ export default function NewCirclePage() {
               type="text"
               placeholder="Ex: Tontine des Entrepreneurs"
               className={inputClass(errors.name)}
-              value={formData.name}
-              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
+              value={name}
+              onChange={(e) => { setName(e.target.value); clearError("name"); }}
             />
           </Field>
 
@@ -152,13 +157,13 @@ export default function NewCirclePage() {
             <textarea
               placeholder="Expliquez l'objectif de ce cercle…"
               className="input-base h-24 resize-none"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
         </div>
 
-        {/* Section 2 */}
+        {/* Section 2 — Financier */}
         <div className="space-y-5">
           <h2 className="text-xs font-black uppercase tracking-widest text-[#ffd803]">
             2. Configuration financière
@@ -173,8 +178,8 @@ export default function NewCirclePage() {
                   placeholder="Ex: 25000"
                   min="500"
                   className={`${inputClass(errors.amount)} pl-11`}
-                  value={formData.amount}
-                  onChange={(e) => { setFormData({ ...formData, amount: e.target.value }); setErrors({ ...errors, amount: undefined }); }}
+                  value={amount}
+                  onChange={(e) => { setAmount(e.target.value); clearError("amount"); }}
                 />
               </div>
             </Field>
@@ -184,8 +189,8 @@ export default function NewCirclePage() {
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#2d334a]/30" />
                 <select
                   className="input-base pl-11 appearance-none"
-                  value={formData.frequency}
-                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value)}
                 >
                   <option value="WEEKLY">Hebdomadaire</option>
                   <option value="BIWEEKLY">Bimensuelle</option>
@@ -196,7 +201,7 @@ export default function NewCirclePage() {
           </div>
         </div>
 
-        {/* Section 3 */}
+        {/* Section 3 — Membres */}
         <div className="space-y-5">
           <h2 className="text-xs font-black uppercase tracking-widest text-[#ffd803]">
             3. Membres
@@ -211,8 +216,8 @@ export default function NewCirclePage() {
                 min="2"
                 max="50"
                 className={`${inputClass(errors.maxMembers)} pl-11`}
-                value={formData.maxMembers}
-                onChange={(e) => { setFormData({ ...formData, maxMembers: e.target.value }); setErrors({ ...errors, maxMembers: undefined }); }}
+                value={maxMembers}
+                onChange={(e) => { setMaxMembers(e.target.value); clearError("maxMembers"); }}
               />
             </div>
           </Field>
