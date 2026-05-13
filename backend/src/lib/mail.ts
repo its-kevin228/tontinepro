@@ -245,3 +245,66 @@ export const sendPaymentConfirmationEmail = async (
     console.error(`[Mail] Erreur envoi confirmation paiement à ${email}:`, error);
   }
 };
+
+// ─── Alerte admin KYC à vérifier manuellement ────────────────────────────────
+export const sendKycAdminAlert = async (
+  adminEmail: string,
+  adminName: string,
+  userName: string,
+  userEmail: string,
+  reason: string,
+  confidence: number,
+  documentUrl: string
+): Promise<void> => {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const scoreDisplay = confidence >= 0 ? `${confidence}%` : "Non analysé (PDF)";
+  const scoreColor = confidence >= 75 ? "#42c88f" : confidence >= 0 ? "#f25f4c" : "#a7a9be";
+
+  const html = baseTemplate(`
+    <h2 style="color:#272343; font-size:22px; font-weight:900; margin:0 0 8px;">⚠️ KYC à vérifier manuellement</h2>
+    <p style="color:#2d334a; font-size:15px; margin:0 0 24px;">Bonjour <strong>${adminName}</strong>,</p>
+
+    <div style="background:#ffd803; border-radius:16px; padding:20px; margin-bottom:24px;">
+      <p style="color:#272343; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:0 0 4px;">
+        Vérification manuelle requise
+      </p>
+      <p style="color:#272343; font-size:16px; font-weight:900; margin:0;">${reason}</p>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+      <tr style="border-bottom:1px solid #dfe5f2;">
+        <td style="padding:12px 0; color:#a7a9be; font-size:12px; font-weight:700; text-transform:uppercase;">Utilisateur</td>
+        <td style="padding:12px 0; color:#272343; font-size:14px; font-weight:700; text-align:right;">${userName}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #dfe5f2;">
+        <td style="padding:12px 0; color:#a7a9be; font-size:12px; font-weight:700; text-transform:uppercase;">Email</td>
+        <td style="padding:12px 0; color:#272343; font-size:14px; font-weight:700; text-align:right;">${userEmail}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0; color:#a7a9be; font-size:12px; font-weight:700; text-transform:uppercase;">Score OCR</td>
+        <td style="padding:12px 0; font-size:14px; font-weight:900; text-align:right; color:${scoreColor};">${scoreDisplay}</td>
+      </tr>
+    </table>
+
+    <a href="${documentUrl}" target="_blank"
+       style="display:block; background:#f8fafc; border:1px solid #dfe5f2; color:#272343; text-align:center; padding:14px; border-radius:12px; font-weight:700; font-size:14px; text-decoration:none; margin-bottom:12px;">
+      📄 Voir le document soumis
+    </a>
+
+    <a href="${frontendUrl}/admin/kyc"
+       style="display:block; background:#272343; color:#ffd803; text-align:center; padding:16px; border-radius:12px; font-weight:900; font-size:15px; text-decoration:none;">
+      Traiter ce KYC dans l'interface →
+    </a>
+  `);
+
+  try {
+    await transporter.sendMail({
+      from: `"TontinePro" <${process.env.EMAIL_USER}>`,
+      to: adminEmail,
+      subject: `⚠️ KYC de ${userName} à vérifier manuellement`,
+      html,
+    });
+  } catch (error) {
+    console.error(`[Mail] Erreur alerte KYC admin:`, error);
+  }
+};

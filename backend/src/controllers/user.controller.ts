@@ -148,9 +148,17 @@ export async function submitKyc(req: Request, res: Response): Promise<void> {
 
   const kyc = await prisma.kycRequest.upsert({
     where: { userId },
-    update: { documentUrl, status: "PENDING", reviewedAt: null, reviewNote: null },
+    update: { documentUrl, status: "PENDING", reviewedAt: null, reviewNote: null, ocrText: null, ocrConfidence: null, ocrAutoApproved: false },
     create: { userId, documentUrl },
   });
 
-  res.status(201).json({ message: "Demande KYC soumise avec succès", kyc });
+  // Lancer l'analyse OCR en arrière-plan (non bloquant)
+  // On utilise setImmediate pour ne pas bloquer la réponse HTTP
+  setImmediate(() => {
+    import("../jobs/kyc-ocr.job.js")
+      .then(({ processKycOcr }) => processKycOcr(kyc.id))
+      .catch((err) => console.error("[KYC] Erreur job OCR:", err));
+  });
+
+  res.status(201).json({ message: "Demande KYC soumise. Analyse en cours…", kyc });
 }

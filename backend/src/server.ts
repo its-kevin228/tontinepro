@@ -16,6 +16,15 @@ import { startReminderJob } from "./jobs/reminder.job";
 
 dotenv.config();
 
+// ── Empêcher les erreurs non catchées de tuer le serveur ──────────────────
+process.on("uncaughtException", (err) => {
+  console.error("[Server] Erreur non catchée (processus maintenu):", err.message);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[Server] Promise rejetée non gérée:", reason);
+});
+
 const app = express();
 
 app.use(cors());

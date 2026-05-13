@@ -20,6 +20,8 @@ interface KycRequest {
   status: KycStatus;
   reviewedAt: string | null;
   reviewNote: string | null;
+  ocrConfidence: number | null;
+  ocrAutoApproved: boolean;
   createdAt: string;
   user: { id: string; name: string; email: string };
 }
@@ -165,9 +167,39 @@ export default function AdminKycPage() {
                   <div>
                     <p className="font-black text-[#272343]">{req.user.name}</p>
                     <p className="text-sm text-[#2d334a]/60 font-medium">{req.user.email}</p>
-                    <p className="text-[10px] text-[#2d334a]/40 font-bold uppercase tracking-widest mt-0.5">
-                      Soumis le {new Date(req.createdAt).toLocaleDateString("fr-FR")}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <p className="text-[10px] text-[#2d334a]/40 font-bold uppercase tracking-widest">
+                        Soumis le {new Date(req.createdAt).toLocaleDateString("fr-FR")}
+                      </p>
+                      {/* Badge auto-validé */}
+                      {req.ocrAutoApproved && (
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-[#42c88f]/10 text-[#42c88f]">
+                          ✓ Auto-validé
+                        </span>
+                      )}
+                      {/* Score OCR */}
+                      {req.ocrConfidence !== null && req.ocrConfidence >= 0 && (
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
+                          req.ocrConfidence >= 75
+                            ? "bg-[#42c88f]/10 text-[#42c88f]"
+                            : req.ocrConfidence >= 50
+                            ? "bg-[#ffd803]/10 text-[#b38a00]"
+                            : "bg-[#f25f4c]/10 text-[#f25f4c]"
+                        }`}>
+                          OCR {req.ocrConfidence}%
+                        </span>
+                      )}
+                      {req.ocrConfidence === null && req.status === "PENDING" && (
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-[#dfe5f2] text-[#2d334a]/60">
+                          Analyse en cours…
+                        </span>
+                      )}
+                    </div>
+                    {req.reviewNote && (
+                      <p className="text-xs text-[#2d334a]/50 italic mt-1 max-w-xs">
+                        {req.reviewNote}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -227,11 +259,17 @@ export default function AdminKycPage() {
                     </div>
                   )}
 
-                  {/* Note de révision */}
-                  {req.reviewNote && (
-                    <p className="text-xs text-[#2d334a]/60 italic max-w-xs">
-                      Note : {req.reviewNote}
-                    </p>
+                {/* Aperçu document si image locale */}
+                  {req.documentUrl.includes("/uploads/kyc/") && /\.(jpg|jpeg|png|webp)$/i.test(req.documentUrl) && (
+                    <div className="mt-3">
+                      <a href={req.documentUrl} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={req.documentUrl}
+                          alt="Document KYC"
+                          className="h-20 w-auto rounded-xl border border-[#dfe5f2] object-cover hover:opacity-80 transition-opacity"
+                        />
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>

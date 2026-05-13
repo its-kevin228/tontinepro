@@ -94,7 +94,10 @@ export default function ProfilePage() {
         });
       }
       setPrefs(prefsData.preferences);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error("Erreur chargement profil:", err);
+      // Ne pas réinitialiser le KYC en cas d'erreur réseau
+    });
   }, []);
 
   const saveProfile = async () => {

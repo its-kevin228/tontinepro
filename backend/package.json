@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "setup:tessdata": "mkdir -p tessdata && curl -L https://github.com/tesseract-ocr/tessdata/raw/main/fra.traineddata -o tessdata/fra.traineddata && curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata -o tessdata/eng.traineddata && gzip -kf tessdata/fra.traineddata && gzip -kf tessdata/eng.traineddata && echo 'Tessdata prêt'"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
@@ -26,6 +27,7 @@
     "pdfkit": "^0.18.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "tesseract.js": "^7.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

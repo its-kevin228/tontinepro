@@ -43,3 +43,6 @@ next-env.d.ts
 # Fichiers uploadés (documents KYC, etc.) — ne pas committer
 /uploads/kyc/*
 !/uploads/kyc/.gitkeep
+
+# Fichiers de langue Tesseract (trop lourds pour git — relancer setup:tessdata)
+/tessdata/*.traineddata
