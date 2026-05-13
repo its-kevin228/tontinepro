@@ -66,8 +66,8 @@ export default function NewCirclePage() {
       e.amount = "Le montant de la cotisation est requis";
     } else if (isNaN(Number(amount)) || Number(amount) <= 0) {
       e.amount = "Le montant doit être un nombre positif";
-    } else if (Number(amount) < 500) {
-      e.amount = "Le montant minimum est de 500 FCFA";
+    } else if (Number(amount) < 100) {
+      e.amount = "Le montant minimum est de 100 FCFA";
     }
 
     if (!maxMembers) {
@@ -176,7 +176,7 @@ export default function NewCirclePage() {
                 <input
                   type="number"
                   placeholder="Ex: 25000"
-                  min="500"
+                  min="100"
                   className={`${inputClass(errors.amount)} pl-11`}
                   value={amount}
                   onChange={(e) => { setAmount(e.target.value); clearError("amount"); }}

@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/lib/auth-context";
 import { NotificationProvider } from "@/lib/notification-context";
+import { ToastProvider } from "@/lib/toast";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -30,7 +31,9 @@ export default function RootLayout({
       <body className={cn("min-h-full flex flex-col bg-background text-text-primary")}>
         <AuthProvider>
           <NotificationProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </NotificationProvider>
         </AuthProvider>
       </body>

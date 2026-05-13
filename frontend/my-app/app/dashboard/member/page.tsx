@@ -1,24 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import {
-  Users,
-  ArrowUpRight,
-  Wallet,
-  Clock,
-  TrendingUp,
-  LayoutGrid,
-  CreditCard,
-  CheckCircle2,
-  Calendar,
+  Users, ArrowUpRight, Wallet, Clock, TrendingUp, LayoutGrid,
+  CreditCard, CheckCircle2, Calendar, LogIn, X, Loader2, AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function MemberDashboardPage() {
+  const router = useRouter();
   const [joinedCircles, setJoinedCircles] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal rejoindre avec code
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -37,6 +38,30 @@ export default function MemberDashboardPage() {
     };
     load();
   }, []);
+
+  const handleJoin = async () => {
+    const token = joinCode.trim();
+    if (!token) { setJoinError("Entrez un code d'invitation"); return; }
+    setJoinLoading(true);
+    setJoinError("");
+    try {
+      // Vérifier d'abord que l'invitation est valide
+      const check = await fetchApi(`/invitations/${token}`);
+      if (check.invitation.status !== "PENDING") {
+        setJoinError("Ce code d'invitation n'est plus valide ou a déjà été utilisé.");
+        return;
+      }
+      // Accepter l'invitation
+      const data = await fetchApi(`/invitations/${token}/accept`, { method: "POST" });
+      setShowJoinModal(false);
+      setJoinCode("");
+      router.push(`/dashboard/circles/${data.circleId}`);
+    } catch (err: any) {
+      setJoinError(err.message || "Code invalide ou expiré");
+    } finally {
+      setJoinLoading(false);
+    }
+  };
 
   const confirmedPayments = payments.filter((p) => p.status === "CONFIRMED");
   const totalPaid = confirmedPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -75,6 +100,7 @@ export default function MemberDashboardPage() {
   ];
 
   return (
+    <>
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -92,6 +118,12 @@ export default function MemberDashboardPage() {
         >
           <CreditCard className="h-5 w-5" /> Mes paiements
         </Link>
+        <button
+          onClick={() => { setShowJoinModal(true); setJoinError(""); setJoinCode(""); }}
+          className="btn-primary flex items-center justify-center gap-2 px-6 py-4 shadow-sm hover:-translate-y-0.5 transition-all"
+        >
+          <LogIn className="h-5 w-5" /> Rejoindre une tontine
+        </button>
       </div>
 
       {/* Stats */}
@@ -270,5 +302,76 @@ export default function MemberDashboardPage() {
         </div>
       )}
     </div>
+
+    {/* ── Modal rejoindre avec code ── */}
+    {showJoinModal && (
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-[32px] p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-black text-[#272343]">Rejoindre une tontine</h3>
+              <p className="text-sm text-[#2d334a]/60 font-medium mt-0.5">
+                Entrez le code d'invitation reçu de l'organisateur.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowJoinModal(false)}
+              className="p-2 hover:bg-[#f8fafc] rounded-xl transition-all"
+            >
+              <X className="h-5 w-5 text-[#2d334a]/60" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-[#2d334a]/40">
+                Code d'invitation
+              </label>
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => { setJoinCode(e.target.value); setJoinError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                placeholder="Ex: cm9abc123xyz..."
+                className="input-base font-mono text-sm"
+                autoFocus
+              />
+              <p className="text-xs text-[#2d334a]/40 font-medium">
+                Le code se trouve à la fin du lien d'invitation partagé par l'organisateur.
+              </p>
+            </div>
+
+            {joinError && (
+              <div className="flex items-center gap-2 p-3 bg-[#f25f4c]/10 border border-[#f25f4c]/20 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-[#f25f4c] shrink-0" />
+                <p className="text-sm text-[#f25f4c] font-bold">{joinError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowJoinModal(false)}
+                className="flex-1 py-3 bg-[#f8fafc] border border-[#dfe5f2] rounded-xl font-black text-[#272343] hover:bg-[#e3f6f5] transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleJoin}
+                disabled={joinLoading || !joinCode.trim()}
+                className="flex-1 py-3 bg-[#ffd803] text-[#272343] rounded-xl font-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-[#e0c700]"
+              >
+                {joinLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogIn className="h-4 w-4" />
+                )}
+                Rejoindre
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

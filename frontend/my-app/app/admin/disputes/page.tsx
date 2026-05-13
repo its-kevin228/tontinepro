@@ -26,7 +26,10 @@ const STATUS_CONFIG: Record<DisputeStatus, { label: string; color: string; icon:
   CLOSED:    { label: "Clôturé",   color: "bg-[#dfe5f2] text-[#2d334a]/60",  icon: CheckCircle2 },
 };
 
+import { useToast } from "@/lib/toast";
+
 export default function AdminDisputesPage() {
+  const { success, error: toastError } = useToast();
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<DisputeStatus | "ALL">("OPEN");
@@ -63,8 +66,9 @@ export default function AdminDisputesPage() {
       setSelected(null);
       setResolution("");
       fetchDisputes();
+      success("Litige mis à jour");
     } catch (e: any) {
-      alert(e.message);
+      toastError(e.message);
     } finally {
       setSaving(false);
     }

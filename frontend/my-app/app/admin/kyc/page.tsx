@@ -30,7 +30,10 @@ const STATUS_CONFIG: Record<KycStatus, { label: string; color: string; icon: Rea
   REJECTED: { label: "Rejeté", color: "bg-[#f25f4c]/10 text-[#f25f4c]", icon: ShieldX },
 };
 
+import { useToast } from "@/lib/toast";
+
 export default function AdminKycPage() {
+  const { success, error: toastError } = useToast();
   const [requests, setRequests] = useState<KycRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<KycStatus | "ALL">("PENDING");
@@ -68,8 +71,9 @@ export default function AdminKycPage() {
       setNoteModal(null);
       setNote("");
       fetchRequests();
+      success(noteModal.action === "approve" ? "KYC approuvé" : "KYC rejeté");
     } catch (err: any) {
-      alert(err.message);
+      toastError(err.message);
     } finally {
       setActionLoading(null);
     }

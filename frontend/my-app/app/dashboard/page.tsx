@@ -36,10 +36,7 @@ export default function OrganizerDashboardPage() {
     const load = async () => {
       try {
         const circlesData = await fetchApi("/circles");
-        const myCircles = (circlesData.circles || []).filter(
-          (c: any) => c.creatorId === user.id
-        );
-        setCircles(myCircles);
+        setCircles(circlesData.circles || []);
 
         // Analytics uniquement pour les organisateurs et super admins
         if (user.role === "ORGANISATEUR" || user.role === "SUPER_ADMIN") {
@@ -215,12 +212,12 @@ export default function OrganizerDashboardPage() {
                   </div>
                   <span
                     className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
-                      circle.status === "ACTIVE"
-                        ? "bg-[#42c88f]/10 text-[#42c88f]"
-                        : "bg-[#ffd803]/10 text-[#b38a00]"
+                      circle.status === "CLOSED"
+                        ? "bg-[#dfe5f2] text-[#2d334a]/60"
+                        : "bg-[#42c88f]/10 text-[#42c88f]"
                     }`}
                   >
-                    {circle.status}
+                    {circle.status === "CLOSED" ? "Terminé" : "En cours"}
                   </span>
                 </div>
               </Link>

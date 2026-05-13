@@ -16,6 +16,7 @@ export const createCircle = async (req: Request, res: Response): Promise<void> =
         frequency,
         maxMembers: parseInt(maxMembers),
         creatorId,
+        status: "ACTIVE", // Actif dès la création — l'organisateur peut démarrer des cycles immédiatement
         memberships: {
           create: {
             userId: creatorId,
@@ -36,13 +37,21 @@ export const createCircle = async (req: Request, res: Response): Promise<void> =
 
 export const getCircles = async (req: Request, res: Response): Promise<void> => {
   try {
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+
+    // Super Admin voit tous les cercles, les autres voient uniquement les leurs
+    const where = userRole === "SUPER_ADMIN"
+      ? {}
+      : { creatorId: userId };
+
     const circles = await prisma.circle.findMany({
+      where,
       include: {
         memberships: true,
-        creator: {
-          select: { name: true }
-        }
-      }
+        creator: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
     });
     res.json({ circles });
   } catch (error) {
@@ -195,5 +204,85 @@ export const getCircleWithOrder = async (req: Request, res: Response): Promise<v
     res.json({ circle });
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la récupération du cercle", error });
+  }
+};
+
+// PATCH /api/circles/:id/activate — Activer un cercle PENDING
+export const activateCircle = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    const membership = await prisma.membership.findUnique({
+      where: { userId_circleId: { userId, circleId: id } },
+    });
+
+    if (!membership || membership.role !== MembershipRole.ORGANISATEUR) {
+      res.status(403).json({ error: "Seul l'organisateur peut activer le cercle" });
+      return;
+    }
+
+    const circle = await prisma.circle.findUnique({ where: { id } });
+    if (!circle) {
+      res.status(404).json({ error: "Cercle introuvable" });
+      return;
+    }
+
+    if (circle.status === "ACTIVE") {
+      res.status(400).json({ error: "Le cercle est déjà actif" });
+      return;
+    }
+
+    const updated = await prisma.circle.update({
+      where: { id },
+      data: { status: "ACTIVE" },
+    });
+
+    res.json({ message: "Cercle activé avec succès", circle: updated });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de l'activation", error });
+  }
+};
+
+// PATCH /api/circles/:id — Mettre à jour le statut du cercle (fermeture)
+export const updateCircle = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+    const { status } = req.body;
+
+    if (!["ACTIVE", "CLOSED"].includes(status)) {
+      res.status(400).json({ error: "Statut invalide. Utilisez ACTIVE ou CLOSED." });
+      return;
+    }
+
+    const membership = await prisma.membership.findUnique({
+      where: { userId_circleId: { userId, circleId: id } },
+    });
+
+    if (!membership || membership.role !== MembershipRole.ORGANISATEUR) {
+      res.status(403).json({ error: "Seul l'organisateur peut modifier le cercle" });
+      return;
+    }
+
+    // Vérifier qu'il n'y a pas de cycle ouvert avant de fermer
+    if (status === "CLOSED") {
+      const openCycle = await prisma.cycle.findFirst({
+        where: { circleId: id, status: "OPEN" },
+      });
+      if (openCycle) {
+        res.status(400).json({ error: "Clôturez le cycle en cours avant de fermer le cercle" });
+        return;
+      }
+    }
+
+    const updated = await prisma.circle.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.json({ message: `Cercle ${status === "CLOSED" ? "fermé" : "mis à jour"}`, circle: updated });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la mise à jour", error });
   }
 };

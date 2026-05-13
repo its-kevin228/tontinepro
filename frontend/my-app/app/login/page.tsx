@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -30,8 +31,12 @@ export default function LoginPage() {
       });
 
       login(data.token, data.user);
-      
-      if (data.user.role === "SUPER_ADMIN") {
+
+      // Rediriger vers le callback si présent (ex: lien d'invitation)
+      const callback = searchParams.get("callback");
+      if (callback) {
+        router.push(callback);
+      } else if (data.user.role === "SUPER_ADMIN") {
         router.push("/admin/dashboard");
       } else {
         router.push("/dashboard");

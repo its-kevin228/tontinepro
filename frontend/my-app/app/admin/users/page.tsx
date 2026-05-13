@@ -39,7 +39,10 @@ const STATUS_CONFIG: Record<UserStatus, { label: string; color: string; icon: Re
   SUSPENDED: { label: "Suspendu", color: "bg-[#ffd803]/10 text-[#b38a00]", icon: ShieldAlert },
 };
 
+import { useToast } from "@/lib/toast";
+
 export default function AdminUsersPage() {
+  const { success, error: toastError } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,26 +84,26 @@ export default function AdminUsersPage() {
   }, [search, users]);
 
   const handleBan = async (userId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir bannir cet utilisateur ?")) return;
     setActionLoading(userId);
     try {
       await fetchApi(`/admin/users/${userId}/ban`, { method: "PATCH" });
+      success(`Utilisateur banni`);
       fetchUsers();
     } catch (err: any) {
-      alert(err.message);
+      toastError(err.message);
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleUnban = async (userId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir débannir cet utilisateur ?")) return;
     setActionLoading(userId);
     try {
       await fetchApi(`/admin/users/${userId}/unban`, { method: "PATCH" });
+      success(`Utilisateur débanni`);
       fetchUsers();
     } catch (err: any) {
-      alert(err.message);
+      toastError(err.message);
     } finally {
       setActionLoading(null);
     }

@@ -9,9 +9,12 @@ import {
 import Link from "next/link";
 import { API_BASE_URL } from "@/lib/api";
 
+import { useToast } from "@/lib/toast";
+
 export default function CircleDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
+  const { success, error: toastError } = useToast();
   const [circle, setCircle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -52,7 +55,6 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
   };
 
   const handleManualPayment = async (memberId: string, cycleId: string, amount: number) => {
-    if (!confirm("Voulez-vous vraiment confirmer que ce membre a payé sa cotisation (espèces) ?")) return;
     setPaymentLoading(memberId);
     try {
       const response = await fetch(`${API_BASE_URL}/payments`, {
@@ -65,14 +67,14 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
       });
       if (response.ok) {
         await fetchCircleDetails();
-        alert("Paiement validé avec succès ✅");
+        success("Paiement validé avec succès");
       } else {
         const error = await response.json();
-        alert(`Erreur: ${error.error}`);
+        toastError(error.error || "Erreur lors de la validation");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de la validation du paiement");
+      toastError("Erreur réseau");
     } finally {
       setPaymentLoading(null);
     }
@@ -103,7 +105,6 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
   };
 
   const revokeInvite = async () => {
-    if (!confirm("Voulez-vous vraiment révoquer cette invitation ?")) return;
     try {
       const response = await fetch(`${API_BASE_URL}/invitations/${inviteToken}/revoke`, {
         method: "PATCH",
@@ -112,7 +113,7 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
       if (response.ok) {
         setInviteLink("");
         setInviteToken("");
-        alert("Invitation révoquée ✅");
+        success("Invitation révoquée");
       }
     } catch (error) {
       console.error("Failed to revoke invite", error);
@@ -120,7 +121,6 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
   };
 
   const handleStartCycle = async () => {
-    if (!confirm("Voulez-vous démarrer un nouveau cycle de tontine maintenant ?")) return;
     try {
       const response = await fetch(`${API_BASE_URL}/circles/${id}/cycles`, {
         method: "POST",
@@ -130,21 +130,21 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
         }
       });
       if (response.ok) {
-        alert("Cycle démarré avec succès !");
+        success("Cycle démarré avec succès");
         fetchCircleDetails();
       } else {
         const err = await response.json();
-        alert(err.error || "Erreur lors du démarrage du cycle");
+        toastError(err.error || "Erreur lors du démarrage du cycle");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur réseau");
+      toastError("Erreur réseau");
     }
   };
 
   const handleCloseCycle = async () => {
     if (!beneficiaryId) {
-      alert("Veuillez sélectionner un bénéficiaire");
+      toastError("Veuillez sélectionner un bénéficiaire");
       return;
     }
     setClosingCycle(true);
@@ -158,17 +158,17 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ beneficiaryId })
       });
       if (response.ok) {
-        alert("Cycle clôturé avec succès !");
+        success("Cycle clôturé avec succès");
         setCloseModal(false);
         setBeneficiaryId("");
         fetchCircleDetails();
       } else {
         const err = await response.json();
-        alert(err.error || "Erreur lors de la clôture");
+        toastError(err.error || "Erreur lors de la clôture");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur réseau");
+      toastError("Erreur réseau");
     } finally {
       setClosingCycle(false);
     }
@@ -204,16 +204,16 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ orders })
       });
       if (response.ok) {
-        alert("Ordre de passage sauvegardé ✅");
+        success("Ordre de passage sauvegardé");
         setOrderMode(false);
         fetchCircleDetails();
       } else {
         const err = await response.json();
-        alert(err.error || "Erreur lors de la sauvegarde");
+        toastError(err.error || "Erreur lors de la sauvegarde");
       }
     } catch (e) {
       console.error(e);
-      alert("Erreur réseau");
+      toastError("Erreur réseau");
     } finally {
       setSavingOrder(false);
     }
@@ -229,8 +229,12 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
   if (!circle) return <div className="text-center p-20 font-bold text-[#272343]">Cercle non trouvé.</div>;
 
   const activeCycle = circle.cycles?.find((c: any) => c.status === "OPEN");
-  const isOrganizer = user?.id === circle.creator.id;
-  const isMember = !isOrganizer && circle.memberships?.some((m: any) => m.user.id === user?.id);
+  const isOrganizer = user?.id === circle.creator?.id;
+  const isOrganizerFallback = user?.id === circle.creatorId;
+  const isOrganizerFinal = isOrganizer || isOrganizerFallback;
+  const isMember = !isOrganizerFinal && circle.memberships?.some(
+    (m: any) => m.user?.id === user?.id || m.userId === user?.id
+  );
 
   // Vérifier si le membre connecté a déjà payé ce cycle
   const myPayment = activeCycle?.payments?.find(
@@ -250,7 +254,7 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
             <div className="flex flex-col md:flex-row justify-between gap-6">
               <div>
                 <span className="px-3 py-1 bg-[#e3f6f5] text-[#272343] text-[10px] font-bold rounded-full uppercase tracking-widest mb-4 inline-block">
-                  {circle.frequency}
+                  {{ WEEKLY: "Hebdomadaire", BIWEEKLY: "Bimensuel", MONTHLY: "Mensuel" }[circle.frequency as string] ?? circle.frequency}
                 </span>
                 <h1 className="text-3xl font-extrabold mb-2 text-[#272343]">{circle.name}</h1>
                 <p className="text-[#2d334a]/60 font-medium mb-6">{circle.description || "Pas de description."}</p>
@@ -279,7 +283,17 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
             </div>
             
             {/* Cycle Actif */}
-            {activeCycle ? (
+            {circle.status === "CLOSED" ? (
+              <div className="mt-8 p-5 bg-[#f8fafc] border border-[#dfe5f2] rounded-2xl flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[#2d334a]/30 shrink-0" />
+                <div>
+                  <p className="font-black text-[#272343] text-sm">Tontine terminée</p>
+                  <p className="text-xs text-[#2d334a]/60 font-medium mt-0.5">
+                    Ce cercle a été clôturé. Tous les membres ont reçu leur tour.
+                  </p>
+                </div>
+              </div>
+            ) : activeCycle ? (
               <div className="mt-8 space-y-3">
                 <div className="bg-[#fffffe] border-l-4 p-5 rounded-r-2xl shadow-sm border-t border-r border-b border-[#dfe5f2]">
                   <div className="flex justify-between items-center">
@@ -297,7 +311,7 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
                         <p className="text-[10px] uppercase font-bold text-[#2d334a]/40 tracking-wider">Cagnotte</p>
                         <p className="font-extrabold text-[#272343]">{(circle.memberships?.length || 0) * circle.amount} FCFA</p>
                       </div>
-                      {isOrganizer && (
+                      {isOrganizerFinal && (
                         <button
                           onClick={() => setCloseModal(true)}
                           className="px-4 py-2 bg-[#272343] text-[#ffd803] text-xs font-black rounded-xl hover:bg-[#1a1730] transition-all"
@@ -338,11 +352,44 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
                 )}
               </div>
             ) : (
-              isOrganizer && (
-                <div className="mt-8">
-                  <button onClick={handleStartCycle} className="w-full sm:w-auto px-6 py-3 bg-[#ffd803] text-[#272343] font-bold rounded-xl hover:bg-[#ffd803]/80 transition-colors flex items-center justify-center gap-2">
+              isOrganizerFinal && (
+                <div className="mt-8 space-y-3">
+                  <button
+                    onClick={handleStartCycle}
+                    className="w-full sm:w-auto px-6 py-3 bg-[#ffd803] text-[#272343] font-bold rounded-xl hover:bg-[#ffd803]/80 transition-colors flex items-center justify-center gap-2"
+                  >
                     <Check className="h-4 w-4" /> Démarrer un nouveau cycle
                   </button>
+
+                  {/* Fermer le cercle — visible seulement si au moins un cycle a été clôturé */}
+                  {circle.cycles?.some((c: any) => c.status === "CLOSED") && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`${API_BASE_URL}/circles/${id}`, {
+                            method: "PATCH",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "Authorization": `Bearer ${localStorage.getItem("token")}`
+                            },
+                            body: JSON.stringify({ status: "CLOSED" })
+                          });
+                          if (response.ok) {
+                            success("Cercle fermé. La tontine est terminée.");
+                            fetchCircleDetails();
+                          } else {
+                            const err = await response.json();
+                            toastError(err.error || "Erreur");
+                          }
+                        } catch {
+                          toastError("Erreur réseau");
+                        }
+                      }}
+                      className="w-full sm:w-auto px-6 py-3 bg-[#f8fafc] border border-[#dfe5f2] text-[#2d334a]/60 font-bold rounded-xl hover:bg-[#f25f4c]/5 hover:border-[#f25f4c]/20 hover:text-[#f25f4c] transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      Fermer définitivement ce cercle
+                    </button>
+                  )}
                 </div>
               )
             )}
@@ -354,7 +401,7 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
               <h3 className="text-lg font-bold flex items-center gap-2 text-[#272343]">
                 <Users className="h-5 w-5 text-[#ffd803]" /> Membres ({circle.memberships?.length || 0})
               </h3>
-              {isOrganizer && !orderMode && (
+              {isOrganizerFinal && !orderMode && (
                 <button
                   onClick={() => { setOrderMode(true); setTempOrder(circle.memberships || []); }}
                   className="text-xs font-black px-4 py-2 bg-[#e3f6f5] text-[#272343] rounded-xl hover:bg-[#bae8e8] transition-all"
@@ -416,7 +463,7 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
                             <span className="px-2 py-1 bg-[#ffd803]/10 text-[#272343] text-[9px] font-bold rounded-md">ORG</span>
                           )}
                           
-                          {activeCycle && isOrganizer && m.user.id !== user?.id && (
+                          {activeCycle && isOrganizerFinal && m.user.id !== user?.id && (
                             hasPaidThisCycle ? (
                               <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
                                 <Check className="h-3 w-3" /> Payé

@@ -6,6 +6,8 @@ import {
   getJoinedCircles,
   setMemberOrder,
   getCircleWithOrder,
+  activateCircle,
+  updateCircle,
 } from "../controllers/circle.controller";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -16,7 +18,9 @@ router.use(requireAuth);
 router.post("/", createCircle);
 router.get("/", getCircles);
 router.get("/joined", getJoinedCircles);
-router.get("/:id", getCircleWithOrder);       // remplace getCircleById — inclut user.id + cycles complets
-router.patch("/:id/order", setMemberOrder);   // définir l'ordre de passage
+router.get("/:id", getCircleWithOrder);
+router.patch("/:id/order", setMemberOrder);
+router.patch("/:id/activate", activateCircle);
+router.patch("/:id", updateCircle);
 
 export default router;

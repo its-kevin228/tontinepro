@@ -47,7 +47,10 @@ const METHOD_LABELS: Record<string, string> = {
   MOBILE_MONEY: "Mobile Money",
 };
 
+import { useToast } from "@/lib/toast";
+
 export default function MemberPaymentsPage() {
+  const { error: toastError } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -80,7 +83,7 @@ export default function MemberPaymentsPage() {
 
       if (!response.ok) {
         const err = await response.json();
-        alert(err.error || "Erreur lors du téléchargement");
+        toastError(err.error || "Erreur lors du téléchargement");
         return;
       }
 
@@ -95,7 +98,7 @@ export default function MemberPaymentsPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      alert("Erreur lors du téléchargement du reçu");
+      toastError("Erreur lors du téléchargement du reçu");
     } finally {
       setDownloading(null);
     }

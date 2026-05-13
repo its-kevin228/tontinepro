@@ -26,9 +26,9 @@ const FREQ_LABELS: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  ACTIVE:  { label: "Actif",    color: "bg-[#42c88f]/10 text-[#42c88f]" },
-  PENDING: { label: "En attente", color: "bg-[#ffd803]/10 text-[#b38a00]" },
-  CLOSED:  { label: "Clôturé",  color: "bg-[#dfe5f2] text-[#2d334a]/60" },
+  ACTIVE:  { label: "En cours",  color: "bg-[#42c88f]/10 text-[#42c88f]" },
+  PENDING: { label: "En cours",  color: "bg-[#42c88f]/10 text-[#42c88f]" }, // legacy
+  CLOSED:  { label: "Terminé",   color: "bg-[#dfe5f2] text-[#2d334a]/60" },
 };
 
 export default function MyCirclesPage() {

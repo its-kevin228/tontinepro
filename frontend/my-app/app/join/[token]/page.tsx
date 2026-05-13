@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -32,8 +32,8 @@ type InvitationPayload = {
   };
 };
 
-export default function JoinCirclePage({ params }: { params: { token: string } }) {
-  const { token } = params;
+export default function JoinCirclePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [invitation, setInvitation] = useState<InvitationPayload["invitation"] | null>(null);

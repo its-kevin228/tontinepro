@@ -12,7 +12,10 @@ interface Notification {
   createdAt: string;
 }
 
+import { useToast } from "@/lib/toast";
+
 export default function NotificationsPage() {
+  const { error: toastError } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -54,7 +57,7 @@ export default function NotificationsPage() {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (err: any) {
-      alert(err.message);
+      toastError(err.message);
     } finally {
       setMarkingAll(false);
     }
