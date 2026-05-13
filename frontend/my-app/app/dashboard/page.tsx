@@ -14,6 +14,9 @@ import {
   LayoutGrid,
   Activity,
   Calendar,
+  AlertTriangle,
+  Clock,
+  FileCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +26,7 @@ export default function OrganizerDashboardPage() {
   const [circles, setCircles] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [kycStatus, setKycStatus] = useState<string | null>(null);
 
   // Rediriger les membres purs vers leur espace
   useEffect(() => {
@@ -35,8 +39,12 @@ export default function OrganizerDashboardPage() {
     if (!user) return;
     const load = async () => {
       try {
-        const circlesData = await fetchApi("/circles");
+        const [circlesData, profileData] = await Promise.all([
+          fetchApi("/circles"),
+          fetchApi("/users/me"),
+        ]);
         setCircles(circlesData.circles || []);
+        setKycStatus(profileData.user?.kycRequest?.status ?? null);
 
         // Analytics uniquement pour les organisateurs et super admins
         if (user.role === "ORGANISATEUR" || user.role === "SUPER_ADMIN") {
@@ -85,6 +93,10 @@ export default function OrganizerDashboardPage() {
     },
   ];
 
+  // KYC bloque la création de cercle si pas approuvé (sauf Super Admin)
+  const kycApproved = user?.role === "SUPER_ADMIN" || kycStatus === "APPROVED";
+  const needsKyc = user?.role === "ORGANISATEUR" && !kycApproved;
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
@@ -97,13 +109,66 @@ export default function OrganizerDashboardPage() {
             Gérez vos cercles, validez les paiements et suivez les cycles.
           </p>
         </div>
-        <Link
-          href="/dashboard/circles/new"
-          className="btn-primary flex items-center justify-center gap-2 px-6 py-4 shadow-xl hover:-translate-y-0.5 transition-all"
-        >
-          <Plus className="h-5 w-5" /> Nouveau Cercle
-        </Link>
+        {kycApproved ? (
+          <Link
+            href="/dashboard/circles/new"
+            className="btn-primary flex items-center justify-center gap-2 px-6 py-4 shadow-xl hover:-translate-y-0.5 transition-all"
+          >
+            <Plus className="h-5 w-5" /> Nouveau Cercle
+          </Link>
+        ) : (
+          <Link
+            href="/dashboard/profile"
+            className="flex items-center justify-center gap-2 px-6 py-4 bg-[#ffd803]/10 border-2 border-[#ffd803]/30 text-[#b38a00] font-black rounded-2xl hover:bg-[#ffd803]/20 transition-all"
+          >
+            <AlertTriangle className="h-5 w-5" />
+            Compléter mon KYC
+          </Link>
+        )}
       </div>
+
+      {/* Bannière KYC */}
+      {needsKyc && (
+        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border-2 ${
+          kycStatus === "PENDING"
+            ? "bg-[#ffd803]/5 border-[#ffd803]/30"
+            : kycStatus === "REJECTED"
+            ? "bg-[#f25f4c]/5 border-[#f25f4c]/20"
+            : "bg-[#bae8e8]/10 border-[#bae8e8]"
+        }`}>
+          <div className="flex items-start gap-3">
+            {kycStatus === "PENDING" ? (
+              <Clock className="h-5 w-5 text-[#b38a00] shrink-0 mt-0.5" />
+            ) : kycStatus === "REJECTED" ? (
+              <AlertTriangle className="h-5 w-5 text-[#f25f4c] shrink-0 mt-0.5" />
+            ) : (
+              <FileCheck className="h-5 w-5 text-[#272343] shrink-0 mt-0.5" />
+            )}
+            <div>
+              <p className="font-black text-sm text-[#272343]">
+                {kycStatus === "PENDING"
+                  ? "Vérification d'identité en cours"
+                  : kycStatus === "REJECTED"
+                  ? "Vérification d'identité rejetée"
+                  : "Vérification d'identité requise"}
+              </p>
+              <p className="text-xs text-[#2d334a]/60 font-medium mt-0.5">
+                {kycStatus === "PENDING"
+                  ? "Votre demande est en cours d'examen. Vous serez notifié dès qu'elle sera traitée."
+                  : kycStatus === "REJECTED"
+                  ? "Votre demande a été rejetée. Soumettez de nouveaux documents pour créer des cercles."
+                  : "Soumettez votre pièce d'identité pour pouvoir créer des cercles de tontine."}
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/profile"
+            className="shrink-0 px-4 py-2 bg-[#272343] text-[#ffd803] text-xs font-black rounded-xl hover:bg-[#1a1730] transition-all"
+          >
+            {kycStatus === "REJECTED" ? "Resoumettre" : kycStatus === "PENDING" ? "Voir le statut" : "Soumettre mon KYC"}
+          </Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -178,16 +178,28 @@ export default function AdminKycPage() {
                     {cfg.label}
                   </span>
 
-                  {/* Lien document */}
-                  <a
-                    href={req.documentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-black text-[#272343] bg-[#f8fafc] border border-[#dfe5f2] px-3 py-1.5 rounded-xl hover:bg-[#e3f6f5] transition-all"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Voir document
-                  </a>
+                  {/* Lien/aperçu document */}
+                  {req.documentUrl.startsWith("http://localhost") || req.documentUrl.startsWith("http://") || req.documentUrl.startsWith("https://") ? (
+                    req.documentUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                      <a href={req.documentUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs font-black text-[#272343] bg-[#f8fafc] border border-[#dfe5f2] px-3 py-1.5 rounded-xl hover:bg-[#e3f6f5] transition-all">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Voir l'image
+                      </a>
+                    ) : (
+                      <a href={req.documentUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs font-black text-[#272343] bg-[#f8fafc] border border-[#dfe5f2] px-3 py-1.5 rounded-xl hover:bg-[#e3f6f5] transition-all">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Voir document
+                      </a>
+                    )
+                  ) : (
+                    <a href={req.documentUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-black text-[#272343] bg-[#f8fafc] border border-[#dfe5f2] px-3 py-1.5 rounded-xl hover:bg-[#e3f6f5] transition-all">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Voir document
+                    </a>
+                  )}
 
                   {/* Actions si PENDING */}
                   {req.status === "PENDING" && (

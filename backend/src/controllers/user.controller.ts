@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import bcrypt from "bcryptjs";
+import path from "path";
 
 // ─── Mon profil ─────────────────────────────────────────────────────────────
 export async function getMe(req: Request, res: Response): Promise<void> {
@@ -16,7 +17,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
       status: true,
       image: true,
       createdAt: true,
-      kycRequest: { select: { status: true, createdAt: true } },
+      kycRequest: { select: { status: true, createdAt: true, reviewNote: true } },
       notificationPreference: true,
       memberships: {
         select: {
@@ -115,10 +116,21 @@ export async function updateNotifPrefs(req: Request, res: Response): Promise<voi
 // ─── Soumettre une demande KYC ──────────────────────────────────────────────
 export async function submitKyc(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;
-  const { documentUrl } = req.body;
+
+  // Récupérer l'URL du fichier uploadé OU l'URL externe fournie
+  let documentUrl: string | undefined;
+
+  if (req.file) {
+    // Fichier uploadé via multer → construire l'URL publique
+    const baseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`;
+    documentUrl = `${baseUrl}/uploads/kyc/${req.file.filename}`;
+  } else if (req.body.documentUrl) {
+    // URL externe (fallback)
+    documentUrl = req.body.documentUrl;
+  }
 
   if (!documentUrl) {
-    res.status(400).json({ error: "documentUrl est requis" });
+    res.status(400).json({ error: "Un document est requis (fichier ou URL)" });
     return;
   }
 

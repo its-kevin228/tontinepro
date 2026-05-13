@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Fichiers uploadés (documents KYC, etc.) — ne pas committer
+/uploads/kyc/*
+!/uploads/kyc/.gitkeep

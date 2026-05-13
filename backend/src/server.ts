@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import authRoutes from "./routes/auth.routes";
 import circleRoutes from "./routes/circle.routes";
 import invitationRoutes from "./routes/invitation.routes";
@@ -19,6 +20,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Servir les fichiers uploadés (documents KYC, etc.)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Routes
 app.use("/api/auth", authRoutes);

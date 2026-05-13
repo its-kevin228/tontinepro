@@ -47,16 +47,19 @@ export async function register(req: Request, res: Response): Promise<void> {
 
   const hashedPassword = await bcrypt.hash(password, 12);
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
+  // L'utilisateur garde son rôle choisi dès l'inscription.
+  // S'il choisit ORGANISATEUR, il a le rôle ORGANISATEUR mais ne peut pas
+  // créer de cercle tant que son KYC n'est pas approuvé (middleware requireKyc).
   const user = await prisma.user.create({
-    data: { 
-      name, 
-      email, 
+    data: {
+      name,
+      email,
       password: hashedPassword,
       role,
       otpCode,
-      otpExpires
+      otpExpires,
     },
     select: { id: true, name: true, email: true, role: true, isVerified: true, createdAt: true },
   });

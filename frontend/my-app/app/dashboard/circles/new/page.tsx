@@ -101,7 +101,12 @@ export default function NewCirclePage() {
       });
       router.push(`/dashboard/circles/${data.circle.id}`);
     } catch (error: any) {
-      setServerError(error.message);
+      // Erreur KYC — rediriger vers le profil
+      if (error.message?.includes("KYC")) {
+        setServerError(error.message + " → Allez dans votre profil pour soumettre votre KYC.");
+      } else {
+        setServerError(error.message);
+      }
     } finally {
       setLoading(false);
     }

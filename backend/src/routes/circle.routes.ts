@@ -10,12 +10,13 @@ import {
   updateCircle,
 } from "../controllers/circle.controller";
 import { requireAuth } from "../middlewares/requireAuth";
+import { requireKyc } from "../middlewares/requireKyc";
 
 const router = Router();
 
 router.use(requireAuth);
 
-router.post("/", createCircle);
+router.post("/", requireKyc, createCircle);  // ← KYC obligatoire pour créer
 router.get("/", getCircles);
 router.get("/joined", getJoinedCircles);
 router.get("/:id", getCircleWithOrder);

@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import { API_BASE_URL } from "./api";
+import { useAuth } from "./auth-context";
 
 export interface ToastNotification {
   id: string;
@@ -31,6 +32,7 @@ const NotificationContext = createContext<NotificationContextType>({
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -48,21 +50,27 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const showToast = useCallback((notif: ToastNotification) => {
     setToast(notif);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    // Auto-dismiss après 5 secondes
     toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   }, []);
 
-  const connect = useCallback(() => {
+  // Se connecte/déconnecte selon l'utilisateur connecté
+  useEffect(() => {
+    // Fermer toute connexion existante
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
+    }
+
+    // Réinitialiser le compteur quand l'utilisateur change
+    setUnreadCount(0);
+    setToast(null);
+
+    // Ne pas se connecter si pas d'utilisateur connecté
+    if (!user) return;
+
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    // Fermer la connexion précédente si elle existe
-    if (esRef.current) {
-      esRef.current.close();
-    }
-
-    // EventSource ne supporte pas les headers nativement
-    // On passe le token en query param (le backend le lira)
     const url = `${API_BASE_URL}/notifications/stream?token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
     esRef.current = es;
@@ -77,7 +85,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         if (data.type === "new") {
           setUnreadCount(data.unreadCount);
-          // Afficher le toast avec la nouvelle notification
           if (data.notification) {
             showToast({
               id: data.notification.id,
@@ -87,23 +94,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           }
         }
       } catch {
-        // Ignorer les messages malformés (heartbeats, etc.)
+        // Ignorer les heartbeats et messages malformés
       }
     };
 
     es.onerror = () => {
-      // EventSource se reconnecte automatiquement — on ne fait rien
+      // EventSource se reconnecte automatiquement
     };
-  }, [showToast]);
-
-  useEffect(() => {
-    connect();
 
     return () => {
-      esRef.current?.close();
+      es.close();
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
-  }, [connect]);
+  // Se reconnecte à chaque changement d'utilisateur (login/logout)
+  }, [user?.id, showToast]);
 
   return (
     <NotificationContext.Provider value={{ unreadCount, toast, dismissToast, resetUnread }}>
