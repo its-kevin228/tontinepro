@@ -57,8 +57,8 @@ export default function AdminUsersPage() {
       const data = await fetchApi("/admin/users");
       setUsers(data.users);
       setFilteredUsers(data.users);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }

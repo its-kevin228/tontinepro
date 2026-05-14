@@ -57,8 +57,8 @@ export default function MemberPayPage() {
             circle: { name: circleData.circle.name, amount: circleData.circle.amount },
           });
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Erreur inconnue");
       } finally {
         setLoading(false);
       }
@@ -96,15 +96,15 @@ export default function MemberPayPage() {
           } catch {}
           if (attempts >= 8) {
             clearInterval(poll);
-            setStep("done"); // on considère que c'est en cours
+            setStep("done"); // on considère que c&apos;est en cours
           }
         }, 2000);
       } else {
-        // CASH : juste afficher un message — l'organisateur validera manuellement
+        // CASH : juste afficher un message — l&apos;organisateur validera manuellement
         setStep("done");
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setSubmitting(false);
     }
@@ -219,7 +219,7 @@ export default function MemberPayPage() {
             <div>
               <p className="font-black text-[#272343]">Espèces</p>
               <p className="text-sm text-[#2d334a]/60 font-medium">
-                Remise directe à l'organisateur
+                Remise directe à l&apos;organisateur
               </p>
             </div>
             {method === "CASH" && (
@@ -231,8 +231,8 @@ export default function MemberPayPage() {
             <div className="flex items-start gap-3 p-4 bg-[#bae8e8]/20 border border-[#bae8e8] rounded-2xl">
               <Info className="h-5 w-5 text-[#272343] shrink-0 mt-0.5" />
               <p className="text-sm text-[#272343] font-medium">
-                Pour un paiement en espèces, remettez votre cotisation à l'organisateur.
-                Il validera votre paiement dans l'application.
+                Pour un paiement en espèces, remettez votre cotisation à l&apos;organisateur.
+                Il validera votre paiement dans l&apos;application.
               </p>
             </div>
           )}
@@ -293,7 +293,7 @@ export default function MemberPayPage() {
               <p className="font-black text-[#272343] text-lg">Paiement en espèces</p>
               <p className="text-sm text-[#2d334a]/60 font-medium mt-2 max-w-xs mx-auto">
                 Remettez <strong>{amount.toLocaleString("fr-FR")} FCFA</strong> à votre organisateur.
-                Il confirmera votre paiement dans l'application.
+                Il confirmera votre paiement dans l&apos;application.
               </p>
             </div>
           )}
@@ -315,7 +315,7 @@ export default function MemberPayPage() {
               ) : method === "MOBILE_MONEY" ? (
                 "Payer maintenant"
               ) : (
-                "J'ai compris"
+                "J&apos;ai compris"
               )}
             </button>
           </div>

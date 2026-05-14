@@ -70,11 +70,11 @@ function VerifyEmailContent() {
         body: JSON.stringify({ email, code }),
       });
 
-      // Stocker le token et l'utilisateur
+      // Stocker le token et l&apos;utilisateur
       login(data.token, data.user);
       router.push("/dashboard?welcome=true");
-    } catch (err: any) {
-      setError(err.message || "Code invalide ou expiré.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Code invalide ou expiré.");
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ function VerifyEmailContent() {
       });
       setTimer(60);
     } catch (err: any) {
-      setError("Erreur lors de l'envoi du code.");
+      setError("Erreur lors de l&apos;envoi du code.");
     } finally {
       setResending(false);
     }
@@ -156,7 +156,7 @@ function VerifyEmailContent() {
         </form>
 
         <div className="mt-10 text-center">
-          <p className="text-[#2d334a] mb-2">Vous n'avez rien reçu ?</p>
+          <p className="text-[#2d334a] mb-2">Vous n&apos;avez rien reçu ?</p>
           <button
             onClick={handleResend}
             disabled={timer > 0 || resending}

@@ -52,7 +52,7 @@ export default function JoinCirclePage({ params }: { params: Promise<{ token: st
           setError((data as any).error || "Invitation invalide ou expiree.");
         }
       } catch {
-        setError("Impossible de charger l'invitation.");
+        setError("Impossible de charger l&apos;invitation.");
       } finally {
         setLoading(false);
       }
@@ -78,8 +78,8 @@ export default function JoinCirclePage({ params }: { params: Promise<{ token: st
       } else {
         router.push("/dashboard");
       }
-    } catch (err: any) {
-      setError(err.message || "Erreur lors de l'adhesion.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l&apos;adhesion.");
     } finally {
       setJoining(false);
     }
@@ -89,7 +89,7 @@ export default function JoinCirclePage({ params }: { params: Promise<{ token: st
     return (
       <div className="min-h-screen bg-[#fffffe] flex flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 text-[#ffd803] animate-spin mb-4" />
-        <p className="text-[#272343] font-bold animate-pulse">Verification de l'invitation...</p>
+        <p className="text-[#272343] font-bold animate-pulse">Verification de l&apos;invitation...</p>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function JoinCirclePage({ params }: { params: Promise<{ token: st
 
         <div className="card-base bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] mb-8 border-t-8 border-t-[#ffd803]">
           <p className="text-[#2d334a]/60 font-medium text-center mb-8 italic">
-            "{circle.description || "Rejoignez notre cercle pour epargner ensemble !"}"
+            &quot;{circle.description || "Rejoignez notre cercle pour epargner ensemble !"}"
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -183,7 +183,7 @@ export default function JoinCirclePage({ params }: { params: Promise<{ token: st
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : (
             <>
-              {user ? "Accepter l'invitation et rejoindre" : "Se connecter pour rejoindre"}
+              {user ? "Accepter l&apos;invitation et rejoindre" : "Se connecter pour rejoindre"}
               <ArrowRight className="h-5 w-5" />
             </>
           )}

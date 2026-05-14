@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export const CTA = () => {
   return (
@@ -16,7 +16,7 @@ export const CTA = () => {
               Prêt à commencer ?
             </span>
             <h2 className="font-display text-[40px] md:text-[64px] font-bold text-[#fffffe] mb-8 leading-[1.05] tracking-tight">
-              Digitalisez votre épargne <br className="hidden md:block" /> collective dès aujourd'hui.
+              Digitalisez votre épargne <br className="hidden md:block" /> collective dès aujourd&apos;hui.
             </h2>
             <p className="text-[18px] md:text-[22px] text-[#a7a9be] mb-12 max-w-2xl mx-auto leading-relaxed">
               Rejoignez la nouvelle ère de la tontine. Sécurisée, transparente et accessible partout en Afrique.

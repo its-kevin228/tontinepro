@@ -53,7 +53,7 @@ export default function MemberOrderPage() {
       try {
         const data: { user: UserProfile } = await fetchApi("/users/me");
 
-        // Filtrer uniquement les cercles où l'utilisateur est MEMBRE
+        // Filtrer uniquement les cercles où l&apos;utilisateur est MEMBRE
         const memberOnly = (data.user.memberships ?? []).filter(
           (m) => m.role === "MEMBRE"
         );
@@ -72,8 +72,8 @@ export default function MemberOrderPage() {
 
         setMemberships(enriched);
         if (enriched.length > 0) setSelected(enriched[0].circle.id);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Erreur inconnue");
       } finally {
         setLoading(false);
       }
@@ -100,7 +100,7 @@ export default function MemberOrderPage() {
 
   const totalPot = circle ? circle.amount * ((circle.memberships ?? []).length) : 0;
 
-  // Calculer la date estimée de passage de l'utilisateur
+  // Calculer la date estimée de passage de l&apos;utilisateur
   const myOrder = selectedMembership?.order;
   const getEstimatedDate = (order: number | null) => {
     if (!order || !activeCycle?.startDate) return null;
@@ -141,7 +141,7 @@ export default function MemberOrderPage() {
           <Users className="h-12 w-12 text-[#2d334a]/20 mx-auto mb-4" />
           <p className="font-black text-[#272343] text-lg">Aucune participation</p>
           <p className="text-[#2d334a]/60 font-medium mt-1">
-            Rejoignez un cercle via un lien d'invitation pour voir votre ordre de passage.
+            Rejoignez un cercle via un lien d&apos;invitation pour voir votre ordre de passage.
           </p>
         </div>
       ) : (
@@ -253,7 +253,7 @@ export default function MemberOrderPage() {
 
                 {sortedMembers.length === 0 ? (
                   <p className="text-sm text-[#2d334a]/60 font-medium text-center py-8">
-                    L'ordre de passage n'a pas encore été défini par l'organisateur.
+                    L&apos;ordre de passage n&apos;a pas encore été défini par l&apos;organisateur.
                   </p>
                 ) : (
                   <div className="space-y-3">

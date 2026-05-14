@@ -112,7 +112,7 @@ export default function AnalyticsPage() {
           Tableau de <span className="text-[#ffd803]">Bord</span>
         </h1>
         <p className="text-[#2d334a]/60 mt-2 font-medium italic">
-          Suivez la santé financière de vos tontines et l'activité de vos membres.
+          Suivez la santé financière de vos tontines et l&apos;activité de vos membres.
         </p>
       </div>
 

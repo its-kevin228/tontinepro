@@ -48,8 +48,8 @@ export default function DisputesPage() {
       ]);
       setDisputes(disputesData.disputes);
       setCircles(circlesData.circles || []);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export default function DisputesPage() {
           <AlertTriangle className="h-10 w-10 text-[#2d334a]/20 mx-auto mb-3" />
           <p className="font-black text-[#272343]">Aucun litige</p>
           <p className="text-sm text-[#2d334a]/40 font-medium mt-1">
-            Vous n'avez signalé aucun problème pour le moment.
+            Vous n&apos;avez signalé aucun problème pour le moment.
           </p>
         </div>
       ) : (

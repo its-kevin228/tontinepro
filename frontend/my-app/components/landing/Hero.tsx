@@ -9,11 +9,11 @@ export const Hero = () => {
       
       <div className="container mx-auto px-6 flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-[#bae8e8]/30 text-[#272343] font-semibold mb-8 border border-[#bae8e8]/50">
-          Tontine pour l'Afrique
+          Tontine pour l&apos;Afrique
         </div>
         
         <h1 className="font-display text-[48px] md:text-[69px] leading-[1.1] md:leading-[80px] font-bold text-[#272343] max-w-4xl tracking-tight mb-10">
-          Cotisez ensemble, <span className="bg-[#ffd803] px-4 rounded-lg inline-block transform -rotate-1">évoluez</span> à l'infini
+          Cotisez ensemble, <span className="bg-[#ffd803] px-4 rounded-lg inline-block transform -rotate-1">évoluez</span> à l&apos;infini
         </h1>
         
         <p className="max-w-2xl text-[18px] md:text-[23px] text-[#2d334a] leading-relaxed md:leading-[32px] mb-12">

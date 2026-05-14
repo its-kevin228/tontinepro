@@ -62,8 +62,8 @@ export default function MemberPaymentsPage() {
     try {
       const data = await fetchApi("/payments");
       setPayments(data.payments);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }

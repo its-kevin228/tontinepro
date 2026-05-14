@@ -46,8 +46,8 @@ export default function AdminDisputesPage() {
       const params = filter !== "ALL" ? `?status=${filter}` : "";
       const data = await fetchApi(`/disputes${params}`);
       setDisputes(data.disputes);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ export default function AdminDisputesPage() {
                 <label className="text-xs font-black uppercase tracking-widest text-[#2d334a]/40">Nouveau statut</label>
                 <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as DisputeStatus)}
                   className="input-base">
-                  <option value="IN_REVIEW">En cours d'examen</option>
+                  <option value="IN_REVIEW">En cours d&apos;examen</option>
                   <option value="RESOLVED">Résolu</option>
                   <option value="CLOSED">Clôturé</option>
                 </select>

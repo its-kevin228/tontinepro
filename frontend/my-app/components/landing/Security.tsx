@@ -38,7 +38,7 @@ export const Security = () => {
             </div>
             <h4 className="text-[20px] font-bold mb-3 text-[#272343]">Conformité locale</h4>
             <p className="text-[#2d334a] text-[15px] leading-relaxed">
-              Solution adaptée aux cadres réglementaires des pays d'Afrique pour une épargne sereine.
+              Solution adaptée aux cadres réglementaires des pays d&apos;Afrique pour une épargne sereine.
             </p>
           </div>
         </div>
@@ -56,7 +56,7 @@ export const Security = () => {
               </div>
               <div className="text-center md:border-r border-[#272343]/10 last:border-0">
                 <div className="text-[40px] md:text-[48px] font-bold text-[#272343] mb-1">0 FCFA</div>
-                <p className="text-[12px] text-[#2d334a] uppercase tracking-wider font-semibold">Frais d'adhésion</p>
+                <p className="text-[12px] text-[#2d334a] uppercase tracking-wider font-semibold">Frais d&apos;adhésion</p>
               </div>
               <div className="text-center">
                 <div className="text-[40px] md:text-[48px] font-bold text-[#272343] mb-1">99.9%</div>

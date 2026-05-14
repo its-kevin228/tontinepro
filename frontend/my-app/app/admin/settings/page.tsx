@@ -55,8 +55,8 @@ export default function AdminSettingsPage() {
       const data = await fetchApi("/admin/settings");
       setSettings(data.settings);
       setForm(data.settings);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
@@ -77,8 +77,8 @@ export default function AdminSettingsPage() {
       setSettings((prev) => ({ ...prev, [key]: form[key] }));
       setSaved(key);
       setTimeout(() => setSaved(null), 2000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setSaving(null);
     }

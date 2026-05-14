@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   Wallet,
   TrendingUp,
-  Loader2,
   RefreshCw,
 } from "lucide-react";
 
@@ -26,21 +25,33 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStats = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchStats = async (isRefresh = false) => {
+    if (isRefresh) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await fetchApi("/admin/dashboard");
       setStats(data);
-    } catch (err: any) {
-      setError(err.message || "Erreur lors du chargement");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors du chargement");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
+    const init = async () => {
+      try {
+        const data = await fetchApi("/admin/dashboard");
+        setStats(data);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Erreur lors du chargement");
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   const cards = stats
@@ -92,11 +103,11 @@ export default function AdminDashboardPage() {
             Dashboard <span className="text-[#ffd803]">Global</span>
           </h1>
           <p className="text-[#2d334a]/60 font-medium mt-1">
-            Vue d'ensemble de la plateforme TontinePro.
+            Vue d&apos;ensemble de la plateforme TontinePro.
           </p>
         </div>
         <button
-          onClick={fetchStats}
+          onClick={() => fetchStats(true)}
           disabled={loading}
           className="flex items-center gap-2 px-5 py-3 bg-[#f8fafc] border border-[#dfe5f2] rounded-xl font-bold text-sm text-[#272343] hover:bg-[#e3f6f5] transition-all disabled:opacity-50"
         >

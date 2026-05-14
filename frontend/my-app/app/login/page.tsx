@@ -32,7 +32,7 @@ export default function LoginPage() {
 
       login(data.token, data.user);
 
-      // Rediriger vers le callback si présent (ex: lien d'invitation)
+      // Rediriger vers le callback si présent (ex: lien d&apos;invitation)
       const callback = searchParams.get("callback");
       if (callback) {
         router.push(callback);
@@ -41,8 +41,8 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard");
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-[32px] font-bold mb-3">Se connecter</h1>
           <p className="text-[#2d334a]">
-            Vous n'avez pas encore de compte ?{" "}
+            Vous n&apos;avez pas encore de compte ?{" "}
             <Link href="/register" className="text-[#272343] font-bold hover:underline">
               Créer un compte
             </Link>

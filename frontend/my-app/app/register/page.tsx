@@ -39,8 +39,8 @@ export default function RegisterPage() {
 
       // Rediriger vers la page de vérification avec l'email en query param
       router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }

@@ -41,17 +41,17 @@ export default function MemberDashboardPage() {
 
   const handleJoin = async () => {
     const token = joinCode.trim();
-    if (!token) { setJoinError("Entrez un code d'invitation"); return; }
+    if (!token) { setJoinError("Entrez un code d&apos;invitation"); return; }
     setJoinLoading(true);
     setJoinError("");
     try {
-      // Vérifier d'abord que l'invitation est valide
+      // Vérifier d&apos;abord que l&apos;invitation est valide
       const check = await fetchApi(`/invitations/${token}`);
       if (check.invitation.status !== "PENDING") {
-        setJoinError("Ce code d'invitation n'est plus valide ou a déjà été utilisé.");
+        setJoinError("Ce code d&apos;invitation n&apos;est plus valide ou a déjà été utilisé.");
         return;
       }
-      // Accepter l'invitation
+      // Accepter l&apos;invitation
       const data = await fetchApi(`/invitations/${token}/accept`, { method: "POST" });
       setShowJoinModal(false);
       setJoinCode("");
@@ -257,7 +257,7 @@ export default function MemberDashboardPage() {
               Aucune tontine en cours
             </h3>
             <p className="text-[#2d334a]/60 font-medium mb-8 max-w-xs mx-auto">
-              Utilisez un lien d'invitation pour rejoindre votre premier cercle.
+              Utilisez un lien d&apos;invitation pour rejoindre votre premier cercle.
             </p>
           </div>
         )}
@@ -311,7 +311,7 @@ export default function MemberDashboardPage() {
             <div>
               <h3 className="text-xl font-black text-[#272343]">Rejoindre une tontine</h3>
               <p className="text-sm text-[#2d334a]/60 font-medium mt-0.5">
-                Entrez le code d'invitation reçu de l'organisateur.
+                Entrez le code d&apos;invitation reçu de l&apos;organisateur.
               </p>
             </div>
             <button
@@ -325,7 +325,7 @@ export default function MemberDashboardPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-widest text-[#2d334a]/40">
-                Code d'invitation
+                Code d&apos;invitation
               </label>
               <input
                 type="text"
@@ -337,7 +337,7 @@ export default function MemberDashboardPage() {
                 autoFocus
               />
               <p className="text-xs text-[#2d334a]/40 font-medium">
-                Le code se trouve à la fin du lien d'invitation partagé par l'organisateur.
+                Le code se trouve à la fin du lien d&apos;invitation partagé par l&apos;organisateur.
               </p>
             </div>
 

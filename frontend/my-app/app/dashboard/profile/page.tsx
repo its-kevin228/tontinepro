@@ -96,7 +96,7 @@ export default function ProfilePage() {
       setPrefs(prefsData.preferences);
     }).catch((err) => {
       console.error("Erreur chargement profil:", err);
-      // Ne pas réinitialiser le KYC en cas d'erreur réseau
+      // Ne pas réinitialiser le KYC en cas d&apos;erreur réseau
     });
   }, []);
 
@@ -153,7 +153,7 @@ export default function ProfilePage() {
         });
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.error || "Erreur lors de l'upload");
+          throw new Error(err.error || "Erreur lors de l&apos;upload");
         }
       } else {
         // URL externe (fallback)
@@ -163,7 +163,7 @@ export default function ProfilePage() {
       setDocumentFile(null);
       setDocumentPreview(null);
       setDocumentUrl("");
-      setKycMsg({ type: "ok", text: "Demande soumise. Vous serez notifié dès qu'elle sera traitée." });
+      setKycMsg({ type: "ok", text: "Demande soumise. Vous serez notifié dès qu&apos;elle sera traitée." });
     } catch (e: any) {
       setKycMsg({ type: "err", text: e.message });
     } finally {
@@ -226,7 +226,7 @@ export default function ProfilePage() {
       {showKyc && (
         <div className="card-base space-y-5">
           <h2 className="font-black text-[#272343] flex items-center gap-2">
-            <FileCheck className="h-5 w-5 text-[#ffd803]" /> Vérification d'identité (KYC)
+            <FileCheck className="h-5 w-5 text-[#ffd803]" /> Vérification d&apos;identité (KYC)
           </h2>
 
           {kyc.status === null ? (
@@ -431,7 +431,7 @@ export default function ProfilePage() {
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#2d334a]/30" />
             <input value={user?.email ?? ""} disabled className="input-base pl-11 opacity-50 cursor-not-allowed" />
           </div>
-          <p className="text-xs text-[#2d334a]/40 font-medium">L'email ne peut pas être modifié.</p>
+          <p className="text-xs text-[#2d334a]/40 font-medium">L&apos;email ne peut pas être modifié.</p>
         </div>
 
         <div className="space-y-2">
@@ -488,7 +488,7 @@ export default function ProfilePage() {
           { key: "emailReminders" as const, label: "Rappels de cotisation par email", desc: "Reçois un email 24h avant l'échéance" },
           { key: "emailPayment" as const, label: "Confirmation de paiement par email", desc: "Email quand ton paiement est confirmé" },
           { key: "emailKyc" as const, label: "Décisions KYC par email", desc: "Email quand ton KYC est approuvé ou rejeté" },
-          { key: "inAppAll" as const, label: "Notifications in-app", desc: "Toutes les alertes dans l'application" },
+          { key: "inAppAll" as const, label: "Notifications in-app", desc: "Toutes les alertes dans l&apos;application" },
         ].map(({ key, label, desc }) => (
           <div key={key} className="flex items-center justify-between gap-4 py-3 border-b border-[#dfe5f2] last:border-0">
             <div>

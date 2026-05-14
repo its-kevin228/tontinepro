@@ -18,21 +18,33 @@ export default function BanLogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLogs = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchLogs = async (isRefresh = false) => {
+    if (isRefresh) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await fetchApi("/admin/ban-logs");
       setLogs(data.logs);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLogs();
+    const init = async () => {
+      try {
+        const data = await fetchApi("/admin/ban-logs");
+        setLogs(data.logs);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Erreur inconnue");
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   return (
@@ -48,7 +60,7 @@ export default function BanLogsPage() {
           </p>
         </div>
         <button
-          onClick={fetchLogs}
+          onClick={() => fetchLogs(true)}
           disabled={loading}
           className="flex items-center gap-2 px-5 py-3 bg-[#f8fafc] border border-[#dfe5f2] rounded-xl font-bold text-sm text-[#272343] hover:bg-[#e3f6f5] transition-all disabled:opacity-50"
         >

@@ -33,10 +33,6 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
   const [tempOrder, setTempOrder] = useState<any[]>([]);
   const [savingOrder, setSavingOrder] = useState(false);
 
-  useEffect(() => {
-    fetchCircleDetails();
-  }, [id]);
-
   const fetchCircleDetails = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/circles/${id}`, {
@@ -48,11 +44,15 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
         setTempOrder(data.circle.memberships || []);
       }
     } catch (error) {
-      console.error("Failed to fetch circle details", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCircleDetails();
+  }, [id, fetchCircleDetails]);
 
   const handleManualPayment = async (memberId: string, cycleId: string, amount: number) => {
     setPaymentLoading(memberId);
@@ -406,7 +406,7 @@ export default function CircleDetailsPage({ params }: { params: Promise<{ id: st
                   onClick={() => { setOrderMode(true); setTempOrder(circle.memberships || []); }}
                   className="text-xs font-black px-4 py-2 bg-[#e3f6f5] text-[#272343] rounded-xl hover:bg-[#bae8e8] transition-all"
                 >
-                  Définir l'ordre
+                  Définir l&apos;ordre
                 </button>
               )}
               {orderMode && (

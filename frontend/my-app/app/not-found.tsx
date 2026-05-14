@@ -17,7 +17,7 @@ export default function NotFound() {
         </div>
 
         <p className="text-[#2d334a]/60 font-medium mb-8 leading-relaxed">
-          La page que vous cherchez n'existe pas ou a été déplacée.
+          La page que vous cherchez n&apos;existe pas ou a été déplacée.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -31,7 +31,7 @@ export default function NotFound() {
             href="/"
             className="px-6 py-3 bg-[#f8fafc] border border-[#dfe5f2] text-[#272343] rounded-xl font-black hover:bg-[#e3f6f5] transition-all"
           >
-            Page d'accueil
+            Page d&apos;accueil
           </Link>
         </div>
       </div>
